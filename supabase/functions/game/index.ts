@@ -468,8 +468,10 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
     // New projects expose secret keys as JSON in SUPABASE_SECRET_KEYS; older ones have SUPABASE_SERVICE_ROLE_KEY.
-    let key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!key) { try { const k = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}'); key = k.default || Object.values(k)[0]; } catch (e) {} }
+    let key = null;
+    try { const k = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}'); key = k.default || Object.values(k)[0] || null; } catch (e) {}
+    if (!key) key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!key) return reply({ error: 'Server setup problem: the function has no secret key (SUPABASE_SECRET_KEYS / SUPABASE_SERVICE_ROLE_KEY).' }, 500);
     const admin = createClient(Deno.env.get('SUPABASE_URL'), key, { auth: { persistSession: false } });
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const { data: ud } = await admin.auth.getUser(token);
@@ -483,6 +485,7 @@ Deno.serve(async req => {
         const room = CORE.newRoom(newCode(), uid);
         const { error } = await admin.from('rooms').insert({ code: room.code, cfg: room.cfg, seats: room.seats, pub: null, ver: 0 });
         if (!error) return reply({ code: room.code });
+        if (error.code !== '23505') return reply({ error: 'Could not create a table: ' + error.message + (error.code ? ' (' + error.code + ')' : '') });
       }
       return reply({ error: 'Could not create a table. Try again.' });
     }
@@ -491,10 +494,11 @@ Deno.serve(async req => {
     if (!/^[A-Z0-9]{4}$/.test(code)) return reply({ error: 'Bad table code.' });
 
     for (let attempt = 0; attempt < 6; attempt++) {
-      const [{ data: room }, { data: priv }] = await Promise.all([
+      const [{ data: room, error: e1 }, { data: priv, error: e2 }] = await Promise.all([
         admin.from('rooms').select('code,cfg,seats,pub,ver').eq('code', code).maybeSingle(),
         admin.from('room_private').select('full_state').eq('code', code).maybeSingle(),
       ]);
+      if (e1 || e2) return reply({ error: 'Server could not read the table: ' + (e1 || e2).message });
       if (!room) return reply({ error: 'Table not found. Check the code.' });
       const full0 = priv?.full_state || null;
       const r = CORE.handle(body, uid, room, full0, Date.now());
