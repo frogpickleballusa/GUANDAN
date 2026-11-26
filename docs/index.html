@@ -45,7 +45,18 @@ input{min-height:44px;border-radius:12px;border:1.5px solid #ffffff33;background
 .mid .mini{flex-wrap:nowrap}.mid .mini .card{width:72px;height:102px;margin-left:calc(var(--step,40px) - 72px);font-size:24px;padding:6px 0 0 6px;border-radius:9px;box-shadow:-3px 3px 8px #0007}.mid .mini .card .big{font-size:34px;right:6px;bottom:6px}.mid .mini .card.jk{font-size:15px}
 .mid .who{font-size:28px;line-height:1.1;font-weight:700;color:var(--ink);margin-top:8px}
 
-.hand{display:flex;flex-wrap:wrap;padding:14px 0 4px 24px;row-gap:8px}
+.hand{display:flex;flex-wrap:wrap;padding:14px 0 4px 24px;row-gap:8px;touch-action:pan-y;perspective:900px}
+/* swipe to hide: each card turns over in a quick wave, showing a patterned back */
+.hand .card{transition:transform .32s ease calc(var(--i,0) * 14ms)}
+.hand .card::after{content:"";position:absolute;inset:-1px;border-radius:7px;opacity:0;transition:opacity 0s linear calc(var(--i,0) * 14ms + 160ms);
+ background:repeating-linear-gradient(45deg,#7d1620 0 6px,#5a0e16 6px 12px);box-shadow:inset 0 0 0 3px #fffaf0,inset 0 0 0 4px #f0c14b88}
+.hand.down .card{transform:rotateY(180deg)}
+.hand.down .card.sel{transform:rotateY(180deg) translateY(-14px)}
+.hand.down .card::after{opacity:1}
+.hand.down .grp{border-bottom-color:#ffffff33}
+.hidenote{display:none;text-align:center;font-size:13px;color:var(--mute);margin-top:6px}
+.hidenote.on{display:block}
+@media(prefers-reduced-motion:reduce){.hand .card,.hand .card::after{transition:none}}
 .grp{display:flex;padding:0 0 6px 24px;margin:0 30px 0 -24px;border-bottom:3px solid var(--gold);border-radius:0 0 4px 4px}
 .turnban{display:none;margin:8px 0 0;padding:10px;border-radius:14px;background:var(--gold);color:#2a1300;text-align:center;font:700 28px/1.1 Outfit,sans-serif;letter-spacing:1px;animation:pulse 1.2s ease-in-out infinite alternate}
 .turnban.on{display:block}
@@ -113,6 +124,7 @@ select{font:inherit;font-size:16px;min-height:44px;border-radius:12px;border:1.5
     <div id="handWrap">
       <div class="turnban" id="turnBan">YOUR TURN</div>
       <div class="hand" id="hand"></div>
+      <div class="hidenote" id="hideNote">Cards hidden. Swipe across them to show.</div>
       <div class="big2"><button id="playB">Play</button><button class="ghost" id="passB">Pass</button></div>
       <div class="tools"><button class="ghost" id="clearB">Clear</button><button class="ghost" id="groupB">Group</button><button class="ghost" id="ungroupB">Ungroup</button><button class="ghost" id="sortB">Sort by suit</button><button class="ghost" id="histB">Last plays</button></div>
       <div class="panel hist" id="hist" hidden></div>
@@ -169,6 +181,7 @@ const ls = { get(k){ try { return localStorage.getItem(k); } catch(e) { return n
 
 const E8 = () => Array(8).fill(null);
 let uid = null, code = null, seats = E8(), S = null, cfg = { n: 6, levels: [2, 2], decl: 0, timer: 20 };
+let handDown = false, swallowTap = 0;
 let preplay = new Map(), pre = new Set(), showHist = false, wasMine = false;
 let pn = {}, bySuit = ls.get('gd6suit') === '1';
 let unsubs = [], sel = new Set(), msg = '', msgErr = false, busy = false;
@@ -433,6 +446,9 @@ function render() {
     const loose = sortBy(hand.filter(id => !inG.has(id)), L);
     const ch = id => cardHTML(id, L, sel.has(id) ? 'sel' : '');
     $('#hand').innerHTML = gs.map(g => `<div class="grp">${sortBy(g, L).map(ch).join('')}</div>`).join('') + loose.map(ch).join('');
+    $('#hand').querySelectorAll('.card').forEach((el, k) => el.style.setProperty('--i', k));
+    $('#hand').classList.toggle('down', handDown);
+    $('#hideNote').classList.toggle('on', handDown);
     $('#groupB').disabled = sel.size < 2;
     $('#ungroupB').disabled = ![...sel].some(id => inG.has(id));
     $('#sortB').textContent = bySuit ? 'Sort by rank' : 'Sort by suit';
@@ -554,6 +570,7 @@ const tributeCard = (id, L) => { const c = GD.P(id); return c.s === 'J' ? (c.r =
 document.addEventListener('click', e => {
   const t = e.target.closest('button, .card');
   if (!t) return;
+  if (t.matches('#hand .card') && (handDown || Date.now() < swallowTap)) return;
   if (t.matches('#hand .card')) {
     const id = t.dataset.id, g = getGroups(ctrlSeat()).find(g => g.includes(id));
     const ids = g ? g.filter(x => S.hands[ctrlSeat()].includes(x)) : [id];
@@ -617,6 +634,22 @@ document.addEventListener('change', e => {
   cfg = c; render(); saveCfg(c);
 });
 window.addEventListener('hashchange', route);
+// swipe sideways across your cards to flip them face down (or back up)
+{
+  let sx = null, sy = 0;
+  const hand = $('#hand');
+  hand.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; });
+  const end = e => {
+    if (sx === null) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 45) {
+      handDown = !handDown; swallowTap = Date.now() + 400;
+      hand.classList.toggle('down', handDown); $('#hideNote').classList.toggle('on', handDown);
+    }
+  };
+  hand.addEventListener('pointerup', end);
+  hand.addEventListener('pointercancel', () => { sx = null; });
+}
 
 // ---- start up: connect to Supabase and sign in anonymously (the sign-in is remembered on this device)
 let bootErr = '';
