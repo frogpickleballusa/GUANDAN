@@ -58,6 +58,11 @@ input{min-height:44px;border-radius:12px;border:1.5px solid #ffffff33;background
 .hidenote{display:none;text-align:center;font-size:13px;color:var(--mute);margin-top:6px}
 .hidenote.on{display:block}
 @media(prefers-reduced-motion:reduce){.hand .card,.hand .card::after{transition:none}}
+/* deal animation: a deck in the middle, card backs flying out to every seat */
+.dealfx{position:fixed;inset:0;pointer-events:none;z-index:60}
+.dealfx .bk{position:fixed;left:0;top:0;width:34px;height:48px;margin:-24px 0 0 -17px;border-radius:5px;
+ background:repeating-linear-gradient(45deg,#7d1620 0 5px,#5a0e16 5px 10px);box-shadow:inset 0 0 0 2px #fffaf0,inset 0 0 0 3px #f0c14b88,0 2px 6px #0008}
+.hand .card.dealing{opacity:0}
 .grp{display:flex;padding:0 0 6px 24px;margin:0 30px 0 -24px;border-bottom:3px solid var(--gold);border-radius:0 0 4px 4px}
 .turnban{display:none;margin:8px 0 0;padding:10px;border-radius:14px;background:var(--gold);color:#2a1300;text-align:center;font:700 28px/1.1 Outfit,sans-serif;letter-spacing:1px;animation:pulse 1.2s ease-in-out infinite alternate}
 .turnban.on{display:block}
@@ -182,7 +187,7 @@ const ls = { get(k){ try { return localStorage.getItem(k); } catch(e) { return n
 
 const E8 = () => Array(8).fill(null);
 let uid = null, code = null, seats = E8(), S = null, cfg = { n: 4, levels: [2, 2], decl: 0, timer: 20 };
-let handDown = false, swallowTap = 0;
+let handDown = false, swallowTap = 0, dealing = false, dealt = new Set(), dealtKey = null;
 let preplay = new Map(), pre = new Set(), showHist = false, wasMine = false;
 let pn = {}, bySuit = ls.get('gd6suit') === '1';
 let unsubs = [], sel = new Set(), msg = '', msgErr = false, busy = false;
@@ -247,6 +252,57 @@ function build() {
   for (let i = 0; i < d.n; i++) d.hands[i] = myHands[i] && d.uids[i] === uid ? myHands[i].cards.slice() : Array(d.counts?.[i] || 0).fill('?' + i);
   (d.tribute || []).forEach(t => { if (typeof t === 'object' && !t.gave && myHands[t.from]?.opts) t.opts = myHands[t.from].opts; });
   S = d;
+}
+// ---- deal animation: plays once when a new hand's cards arrive
+function maybeDeal(me) {
+  if (!S || dealing || me < 0 || !(S.phase === 'play' || S.phase === 'return')) return;
+  const key = code + ':' + S.hand;
+  if (key === dealtKey) return;
+  const mine = S.hands[me] || [];
+  if (!mine.length || mine.some(id => id[0] === '?') || mine.length !== (S.counts?.[me] ?? mine.length)) return;
+  dealtKey = key;
+  if (S.log?.length || S.last || S.out?.length) return;              // joined mid-hand: no animation
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  playDeal(me);
+}
+function playDeal(me) {
+  const felt = $('#felt'), fr = felt.getBoundingClientRect();
+  const cx = fr.left + fr.width / 2, cy = fr.top + fr.height / 2;
+  const n = S.n, per = Math.max(...(S.counts || [27]));
+  dealing = true; dealt = new Set();
+  render();
+  const seatsEl = [...$('#felt').querySelectorAll('.seat')];
+  // measure every landing spot now, so later screen updates can't move the targets
+  const centerOf = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const handSpots = [...$('#hand').querySelectorAll('.card')].map(el => ({ id: el.dataset.id, at: centerOf(el) }));
+  const seatSpots = seatsEl.map(centerOf);
+  const fx = document.createElement('div'); fx.className = 'dealfx'; document.body.appendChild(fx);
+  const deck = [];
+  for (let k = 0; k < 5; k++) { const d = document.createElement('div'); d.className = 'bk'; d.style.transform = `translate(${cx - k}px,${cy - k * 1.5}px)`; fx.appendChild(d); deck.push(d); }
+  const total = n * per, step = Math.min(9, 900 / total), fly = 260;
+  let k = 0;
+  for (let round = 0; round < per; round++) {
+    for (let j = 1; j <= n; j++) {
+      const seat = (S.turn + j) % n;
+      const delay = 120 + k * step; k++;
+      let target, card = null;
+      if (seat === me) { card = handSpots[round]; if (!card) continue; target = card.at; }
+      else { target = seatSpots[seat]; if (!target) continue; }
+      const b = document.createElement('div'); b.className = 'bk'; b.style.opacity = '0'; fx.appendChild(b);
+      const a = b.animate([
+        { transform: `translate(${cx}px,${cy}px) rotate(0deg) scale(1)`, opacity: 1 },
+        { transform: `translate(${target[0]}px,${target[1]}px) rotate(${seat === me ? 0 : 200}deg) scale(${seat === me ? 1.2 : .6})`, opacity: seat === me ? 1 : .2 },
+      ], { duration: fly, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+      a.onfinish = () => {
+        b.remove();
+        if (card) { dealt.add(card.id); $('#hand').querySelector(`.card[data-id="${card.id}"]`)?.classList.remove('dealing'); }
+      };
+    }
+  }
+  setTimeout(() => {
+    deck.forEach(d => d.animate([{ opacity: 1 }, { opacity: 0, transform: d.style.transform + ' scale(.6)' }], { duration: 200, fill: 'forwards' }));
+  }, 120 + k * step);
+  setTimeout(() => { fx.remove(); dealing = false; render(); }, 120 + k * step + fly + 250);
 }
 function applyRow(row) {
   if (!row || row.code !== code) return;
@@ -445,7 +501,7 @@ function render() {
     const gs = getGroups(me).map(g => g.filter(id => hand.includes(id))).filter(g => g.length);
     const inG = new Set(gs.flat());
     const loose = sortBy(hand.filter(id => !inG.has(id)), L);
-    const ch = id => cardHTML(id, L, sel.has(id) ? 'sel' : '');
+    const ch = id => cardHTML(id, L, (sel.has(id) ? 'sel' : '') + (dealing && !dealt.has(id) ? ' dealing' : ''));
     $('#hand').innerHTML = gs.map(g => `<div class="grp">${sortBy(g, L).map(ch).join('')}</div>`).join('') + loose.map(ch).join('');
     $('#hand').querySelectorAll('.card').forEach((el, k) => el.style.setProperty('--i', k));
     $('#hand').classList.toggle('down', handDown);
@@ -518,6 +574,7 @@ function render() {
   if (!t && !S) t = mySeats().length ? `Waiting for ${n} players.` : 'Choose an open seat to join.';
   st.textContent = t; st.className = 'status' + (msgErr ? ' err' : '');
   updateCd();
+  maybeDeal(me);
   // result
   const res = $('#result');
   if (S && S.result && (S.phase === 'done' || S.phase === 'over')) {
