@@ -566,7 +566,7 @@ document.addEventListener('click', e => {
     case 'create': {
       ls.set('gd6name', $('#nm').value.trim());
       say('Creating a table…');
-      call('create').then(r => { if (r?.code) location.hash = 't-' + r.code; });
+      call('create', { name: $('#nm').value.trim() }).then(r => { if (r?.code) { msg = ''; location.hash = 't-' + r.code; } });
       break;
     }
     case 'undoB': askUndo(); break;

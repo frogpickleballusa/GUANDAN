@@ -28,7 +28,7 @@ Deno.serve(async req => {
     if (body.action === 'create') {
       if (Math.random() < 0.1) await admin.rpc('cleanup_old_rooms');
       for (let k = 0; k < 8; k++) {
-        const room = CORE.newRoom(newCode(), uid);
+        const room = CORE.newRoom(newCode(), uid, body.name);
         const { error } = await admin.from('rooms').insert({ code: room.code, cfg: room.cfg, seats: room.seats, pub: null, ver: 0 });
         if (!error) return reply({ code: room.code });
         if (error.code !== '23505') return reply({ error: 'Could not create a table: ' + error.message + (error.code ? ' (' + error.code + ')' : '') });

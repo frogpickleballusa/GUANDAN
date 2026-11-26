@@ -8,8 +8,11 @@
   const cleanName = v => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16);
   const strip = x => { const c = clone(x); delete c.prev; delete c.undoReq; return c; };
 
-  function newRoom(code, uid) {
-    return { code, cfg: { n: 6, levels: [2, 2], decl: 0, host: uid, timer: 20 }, seats: Array(8).fill(null), pub: null };
+  // The person who creates a table is its host and sits in seat 1 straight away.
+  function newRoom(code, uid, name) {
+    const seats = Array(8).fill(null);
+    seats[0] = { uid, name: cleanName(name) };
+    return { code, cfg: { n: 6, levels: [2, 2], decl: 0, host: uid, timer: 20 }, seats, pub: null };
   }
 
   // Public view of the game: everything except hands, the undo snapshot and tribute options.
