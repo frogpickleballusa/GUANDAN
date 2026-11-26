@@ -27,6 +27,7 @@ create table if not exists public.hands (
 );
 
 -- Players may read rooms and (through the policy below) their own hand; nobody may write directly.
+grant select, insert, update, delete on public.rooms, public.room_private, public.hands to service_role;
 grant select on public.rooms, public.hands to authenticated;
 revoke insert, update, delete on public.rooms, public.hands, public.room_private from anon, authenticated;
 revoke select on public.room_private from anon, authenticated;
