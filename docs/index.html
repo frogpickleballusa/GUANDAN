@@ -268,11 +268,12 @@ function animatePlay(me) {
   if (!cards.length) return;
   animUntil = Date.now() + 1400;
   const seatEl = document.querySelectorAll('#felt .seat')[S.last.seat];
-  const from = S.last.seat === me && $('#hand') ? $('#hand') : seatEl;
+  const from = seatEl || $('#hand');
   if (!from) return;
   const fr = from.getBoundingClientRect(), ox = fr.left + fr.width / 2, oy = fr.top + Math.min(fr.height / 2, 60);
-  const mineNow = S.last.seat === me;
-  const originOf = el => (mineNow && playedFrom[el.dataset.id]) || [ox, oy];
+  // cards you just played start from the exact spot they had in your hand
+  const mineNow = cards.some(el => playedFrom[el.dataset.id]);
+  const originOf = el => playedFrom[el.dataset.id] || [ox, oy];
   const o0 = mineNow ? 1 : .5;   // your own cards stay solid as they leave your hand
   const t = S.last.c.t, k = cards.length, midI = (k - 1) / 2;
   const isBomb = t === 'bomb' || t === 'sf' || t === 'kb';
@@ -313,6 +314,7 @@ function animatePlay(me) {
     }
     el.animate(frames, { ...opt, fill: 'backwards' });
   });
+  playedFrom = {};
   if (isBomb) {                                               // bombs: table shake + gold flash, harder for bigger bombs
     const hit = t === 'kb' ? 2.2 : Math.min(2, 0.8 + (S.last.c.n - 4) * 0.15);
     const land = 460 + (k - 1) * 30;
