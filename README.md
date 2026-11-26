@@ -19,8 +19,9 @@ Supabase server function checks every move.
      `SUPABASE_PROJECT_REF` (the part before `.supabase.co` in your project URL). Then
      Actions → "Deploy game function" → Run workflow.
    - **By hand:** Supabase → Edge Functions → Deploy a new function → Via editor, name it `game`,
-     paste all of `supabase/functions/game/index.ts`, Deploy.
-3. **Website config**: put your project URL and anon (public) key in `docs/config.js`.
+     paste all of `supabase/functions/game/index.ts`, Deploy. Then in the function's Details,
+     turn **off** "Enforce JWT verification" (the function checks the player's sign-in itself).
+3. **Website config**: put your project URL and publishable key (or legacy anon key) in `docs/config.js`.
 4. **GitHub Pages**: repo Settings → Pages → Deploy from a branch → `main`, folder `/docs`.
 
 The free Supabase plan pauses a project after a week with no activity; restore it from the dashboard.

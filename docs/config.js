@@ -1,5 +1,5 @@
-// Fill these in from Supabase → Project Settings → API. The anon key is meant to be public.
+// From Supabase → Project Settings → API Keys. Use the publishable key (sb_publishable_…) or the legacy anon key; both are meant to be public.
 window.GUANDAN_CONFIG = {
-  url: 'https://YOUR-PROJECT.supabase.co',
-  anonKey: 'YOUR-ANON-KEY',
+  url: 'https://tlxdmejmwjfoedgaamzr.supabase.co',
+  anonKey: 'YOUR-PUBLISHABLE-KEY',
 };

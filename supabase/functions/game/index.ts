@@ -467,7 +467,10 @@ const newCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
-    const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
+    // New projects expose secret keys as JSON in SUPABASE_SECRET_KEYS; older ones have SUPABASE_SERVICE_ROLE_KEY.
+    let key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!key) { try { const k = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}'); key = k.default || Object.values(k)[0]; } catch (e) {} }
+    const admin = createClient(Deno.env.get('SUPABASE_URL'), key, { auth: { persistSession: false } });
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const { data: ud } = await admin.auth.getUser(token);
     const uid = ud?.user?.id;
