@@ -181,7 +181,7 @@ const NAMES = {'1':'Single','2':'Pair','3':'Triple',fh:'Full house',st:'Straight
 const ls = { get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e) {} } };
 
 const E8 = () => Array(8).fill(null);
-let uid = null, code = null, seats = E8(), S = null, cfg = { n: 6, levels: [2, 2], decl: 0, timer: 20 };
+let uid = null, code = null, seats = E8(), S = null, cfg = { n: 4, levels: [2, 2], decl: 0, timer: 20 };
 let handDown = false, swallowTap = 0;
 let preplay = new Map(), pre = new Set(), showHist = false, wasMine = false;
 let pn = {}, bySuit = ls.get('gd6suit') === '1';
@@ -276,7 +276,7 @@ async function refresh() {
   } catch (e) {}
 }
 function route() {
-  unsubs.forEach(u => u()); unsubs = []; S = null; pub = null; myHands = {}; rowVer = -1; seats = E8(); cfg = { n: 6, levels: [2, 2], decl: 0, timer: 20 }; sel.clear(); msg = '';
+  unsubs.forEach(u => u()); unsubs = []; S = null; pub = null; myHands = {}; rowVer = -1; seats = E8(); cfg = { n: 4, levels: [2, 2], decl: 0, timer: 20 }; sel.clear(); msg = '';
   const m = location.hash.match(/^#t-([A-Z0-9]{4})$/);
   code = m ? m[1] : null;
   if (code && sb) {

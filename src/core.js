@@ -12,7 +12,7 @@
   function newRoom(code, uid, name) {
     const seats = Array(8).fill(null);
     seats[0] = { uid, name: cleanName(name) };
-    return { code, cfg: { n: 6, levels: [2, 2], decl: 0, host: uid, timer: 20 }, seats, pub: null };
+    return { code, cfg: { n: 4, levels: [2, 2], decl: 0, host: uid, timer: 20 }, seats, pub: null };
   }
 
   // Public view of the game: everything except hands, the undo snapshot and tribute options.
