@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guandan Table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a lively tea-house card table, warm and quick to read on a phone.
+   IDEA: a red lacquer card table seen from above, six chairs around it.
+   PICTURE: the oval table with six seats, the current trick in the middle, your fan of cards below.
+   COLOUR and TYPE: lacquer red and black, ivory cards, gold accent; three team colours jade, azure, amber. Ma Shan Zheng for 掼蛋, Outfit for everything else.
+   LAYOUT: one column: header, table, hand, buttons; results and rules beneath. */
+:root{color-scheme:dark;--bg:#1d0a0c;--lac:#7d1620;--lac2:#5a0e16;--ink:#fbeee0;--mute:#d9b8a8;--gold:#f0c14b;--card:#fffaf0;--cink:#1b1b1b;--red:#c8102e;
+--t0:#3ccf9a;--t1:#ffb347}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(120% 80% at 50% 0,#3a1015,var(--bg));color:var(--ink);font:16px/1.5 Outfit,system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding:14px max(3vw,12px) 40px}
+h1{font:400 44px/1.05 'Ma Shan Zheng',serif;margin:0;color:var(--gold)}
+h1 small{font:600 17px Outfit,sans-serif;color:var(--ink);margin-left:8px}
+button,input{font:inherit;font-size:16px}
+button{min-height:44px;border-radius:12px;border:0;padding:0 16px;font-weight:600;cursor:pointer;background:var(--gold);color:#2a1300}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid #ffffff44}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,.card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+input{min-height:44px;border-radius:12px;border:1.5px solid #ffffff33;background:#00000040;color:var(--ink);padding:0 12px;width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.lv{display:flex;gap:6px;flex-wrap:wrap}
+.lv span{padding:4px 10px;border-radius:99px;background:#00000050;font-size:14px;font-weight:600;border:1.5px solid transparent}
+.lv span.on{border-color:var(--gold)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.felt{position:relative;height:clamp(390px,106vw,470px);margin:8px 0 14px}
+.felt::before{content:"";position:absolute;left:50%;top:50%;width:min(66%,290px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(70% 60% at 50% 35%,var(--lac),var(--lac2));box-shadow:inset 0 0 0 6px #2a0508,inset 0 0 0 8px #f0c14b55,0 18px 40px #0009}
+.seat{position:absolute;transform:translate(-50%,-50%);width:clamp(72px,20vw,108px);padding:3px 5px;border-radius:10px;background:#140507e6;border:2px solid #ffffff22;text-align:center;font-size:11px;line-height:1.25;z-index:2}
+.seat b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat.turn{border-color:var(--gold);box-shadow:0 0 0 4px #f0c14b44}
+.seat .n{font-size:16px;font-weight:700}
+.seat button{min-height:34px;padding:0 8px;font-size:13px;margin-top:3px}
+.mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(62%,260px);text-align:center;z-index:1}
+.mid .who{font-size:13px;color:var(--mute);margin-top:4px}
+.mini{display:flex;justify-content:center;flex-wrap:wrap;padding-left:16px}
+.mini .card{width:30px;height:44px;margin-left:-16px;font-size:12px;cursor:default}
+.mini .card .big{font-size:15px}
+.mid .mini{flex-wrap:nowrap}.mid .mini .card{width:72px;height:102px;margin-left:calc(var(--step,40px) - 72px);font-size:24px;padding:6px 0 0 6px;border-radius:9px;box-shadow:-3px 3px 8px #0007}.mid .mini .card .big{font-size:34px;right:6px;bottom:6px}.mid .mini .card.jk{font-size:15px}
+.mid .who{font-size:28px;line-height:1.1;font-weight:700;color:var(--ink);margin-top:8px}
+
+.hand{display:flex;flex-wrap:wrap;padding:14px 0 4px 24px;row-gap:8px}
+.grp{display:flex;padding:0 0 6px 24px;margin:0 30px 0 -24px;border-bottom:3px solid var(--gold);border-radius:0 0 4px 4px}
+.turnban{display:none;margin:8px 0 0;padding:10px;border-radius:14px;background:var(--gold);color:#2a1300;text-align:center;font:700 28px/1.1 Outfit,sans-serif;letter-spacing:1px;animation:pulse 1.2s ease-in-out infinite alternate}
+.turnban.on{display:block}
+.card.opt{outline:3px dashed var(--gold);outline-offset:-3px}
+.cd{font-variant-numeric:tabular-nums}.seat .cd{display:block;font-weight:700;color:var(--gold);font-size:15px}.cd.low{color:#ff6b6b}
+@keyframes pulse{from{box-shadow:0 0 0 0 #f0c14b88}to{box-shadow:0 0 0 10px #f0c14b00}}
+@media(prefers-reduced-motion:reduce){.turnban{animation:none}}
+#playB.on,#passB.on{background:#3ccf9a;color:#062a1d;border-color:transparent}
+.hist{margin-top:10px}.hist .row{gap:8px;padding:8px 0;border-top:1px solid #ffffff18;align-items:center}.hist .mini{justify-content:flex-start}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tools button{flex:1 1 80px;min-height:40px;font-size:15px}
+.card{position:relative;width:46px;height:66px;margin-left:-24px;border-radius:7px;background:var(--card);color:var(--cink);border:1px solid #0003;box-shadow:-2px 2px 4px #0005;font-weight:700;font-size:15px;line-height:1;padding:4px 0 0 4px;text-align:left;cursor:pointer;transition:transform .12s;user-select:none;-webkit-user-select:none}
+.card.r{color:var(--red)}
+.card .big{position:absolute;right:4px;bottom:4px;font-size:20px}
+.card.w{background:linear-gradient(#fff6d6,#ffe9a3);box-shadow:-2px 2px 4px #0005,inset 0 0 0 2px var(--gold)}
+.card.jk{font-size:10px;letter-spacing:-.5px}
+.card.sel{transform:translateY(-14px);box-shadow:-2px 2px 4px #0005,0 0 0 3px var(--gold)}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.bar button{flex:1 1 90px}
+.big2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.big2 button{min-height:60px;font-size:21px;border-radius:16px}
+.status{min-height:48px;padding:10px 12px;border-radius:12px;background:#00000040;margin-top:8px}
+.status.err{color:#ffb3b3}
+.panel{background:#140507;border:1.5px solid #ffffff1f;border-radius:16px;padding:16px;margin-top:16px}
+.panel h2{margin:0 0 8px;font-size:22px;line-height:1.1}
+ol{margin:6px 0 12px;padding-left:22px}
+details{margin-top:16px;background:#00000033;border-radius:14px;padding:4px 14px}
+summary{min-height:44px;display:flex;align-items:center;font-weight:600;cursor:pointer}
+details li{margin:4px 0}
+.note{font-size:13px;color:var(--mute)}
+.lobby{display:grid;gap:14px;margin-top:18px}
+.setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:4px 0 14px}
+.setup label{display:grid;gap:4px;font-size:14px;font-weight:600}
+select{font:inherit;font-size:16px;min-height:44px;border-radius:12px;border:1.5px solid #ffffff33;background:#1a0709;color:var(--ink);padding:0 10px}
+.felt.n8 .seat{width:clamp(68px,19vw,100px)}.felt.n8{height:clamp(440px,122vw,540px);margin-top:12px}
+.code{font-size:28px;font-weight:700;letter-spacing:3px;color:var(--gold)}
+@media(max-width:600px){h1{font-size:38px}.card{width:40px;height:58px;margin-left:-20px;font-size:14px}.hand{padding-left:20px}}
+</style></head><body>
+<div class="wrap">
+  <div class="hdr"><h1>掼蛋<small id="sub">Guandan · 6 players · 3 decks</small></h1><div class="lv" id="levels"></div></div>
+  <div id="banner" class="status" hidden></div>
+
+  <section id="lobby" class="lobby" hidden>
+    <div class="panel">
+      <h2>Your name</h2>
+      <input id="nm" maxlength="16" placeholder="e.g. Sunny" autocomplete="nickname">
+    </div>
+    <div class="panel">
+      <h2>Start a table</h2>
+      <p class="note">You get a 4-letter code and an invite link. Friends just open the link, no account needed.</p>
+      <button id="create">Create table</button>
+    </div>
+    <div class="panel">
+      <h2>Join a table</h2>
+      <div class="row"><input id="jc" maxlength="4" placeholder="Code" style="flex:1 1 120px;text-transform:uppercase"><button id="join">Join</button></div>
+    </div>
+  </section>
+
+  <section id="table" hidden>
+    <div class="row" style="justify-content:space-between">
+      <div>Table <span class="code" id="tcode"></span></div>
+      <div class="row"><button class="ghost" id="copy">Copy invite link</button><button class="ghost" id="leaveT">Leave</button></div>
+    </div>
+    <div class="panel" id="setup" hidden></div>
+    <div class="felt" id="felt"></div>
+    <div id="handWrap">
+      <div class="turnban" id="turnBan">YOUR TURN</div>
+      <div class="hand" id="hand"></div>
+      <div class="big2"><button id="playB">Play</button><button class="ghost" id="passB">Pass</button></div>
+      <div class="tools"><button class="ghost" id="clearB">Clear</button><button class="ghost" id="groupB">Group</button><button class="ghost" id="ungroupB">Ungroup</button><button class="ghost" id="sortB">Sort by suit</button><button class="ghost" id="histB">Last plays</button></div>
+      <div class="panel hist" id="hist" hidden></div>
+    </div>
+    <div id="undo"></div>
+    <div class="status" id="status"></div>
+    <div id="result"></div>
+  </section>
+
+  <details>
+    <summary>Rules used here</summary>
+    <ul>
+      <li>4, 6 or 8 players with one deck per two players, so everyone gets 27 cards. Two teams sit alternately: odd seats are Jade, even seats are Amber. Play goes to the right.</li>
+      <li>Each team's starting level is set before the deal (normally 2), along with which team's level the first hand uses. After that, the hand's level is the level of the team that went out first last hand. Level cards rank above A and below the jokers; the red-heart level cards (gold edge, one per deck) are wild and stand in for any card except a joker.</li>
+      <li>Plays: single, pair, triple, full house (triple + pair), straight of 5, tube (3 straight pairs), plate (2 straight triples). A can be high or low in a run.</li>
+      <li>Bombs beat everything above: 4 of a kind &lt; 5 of a kind &lt; straight flush &lt; 6 of a kind … &lt; all the jokers together (4, 6 or 8 of them).</li>
+      <li>Your hand arrives sorted. Select cards and tap Group to keep them together (a bomb or straight you are saving); tapping a grouped card selects the whole group, and Ungroup breaks it up. Groups are only on your device.</li>
+      <li>Take-back: the player who just moved can ask to undo that one move. The table pauses until the host (whoever created the table) approves or denies it. The host's own take-backs need no approval.</li>
+      <li>Pre-pass: tap Pass before your turn and you pass automatically the moment your turn comes (once). If the table has been cleared and you would lead, it cancels instead. When it isn't your turn, Play and Pass become Pre-play and Pre-pass. Pre-play: select cards and tap it; they are played the moment your turn comes if they beat the table, otherwise it cancels and leaves them selected. Other players' card counts show as 10+ until they are down to 10. Last plays shows the most recent plays of the hand, newest first.</li>
+      <li>Turn timer: set in game setup (Off, or 10 to 60 seconds, default 20). It applies to every turn except the very first turn of the game. If time runs out you pass; if you were leading a new trick, the lead moves to the next player.</li>
+      <li>Auto-pass: if it's your turn, you have fewer than 4 cards, and the play on the table uses more cards than you hold, you pass automatically. Only the number of cards counts, never their values.</li>
+      <li>When you go out and nobody beats your last play, your next teammate still holding cards leads.</li>
+      <li>The hand ends once only one team still has cards. Add up each team's finishing places (1st = 1, 2nd = 2 …); the lower total wins the hand, and a tie goes to the team that went out first. Taking all the top places moves up 3; the rest scale down to +2 or +1. With 4 players this is the usual 1-2 = +3, 1-3 = +2, 1-4 = +1. With 6 players: total 6 = +3, 7–8 = +2, 9–10 = +1.</li>
+      <li>Tribute (done for you): on a +3 every loser pays; otherwise the losing team's last finisher pays (on a +2 with 6 or 8 players, the last two pay). Each payer's best non-wild card goes to a winner (the best card to the winner who finished highest). If that highest card comes in more than one suit, the payer picks which suit to give. Each winner then picks a card of 10 or lower to give back, and play starts once every card has been returned. No tribute if the payers hold every big joker. The best payer leads.</li>
+      <li>Win: take a hand while playing your own team's A level.</li>
+    </ul>
+    <p class="note">Each phone only ever receives its own cards, and the server checks every move.</p>
+  </details>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="engine.js"></script>
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RK = r => ({11:'J',12:'Q',13:'K',14:'A'}[r] || String(r));
+const SY = {S:'♠',H:'♥',C:'♣',D:'♦'};
+const TN = ['Jade','Amber'];
+const posOf = (k, n) => {
+  const a = (90 - k * 360 / n) * Math.PI / 180, sn = Math.sin(a);
+  if (Math.abs(sn) > 0.99) {
+    // straight above / below: sit just outside the circle
+    const f = document.getElementById('felt'), fw = f?.clientWidth || 360, fh = f?.clientHeight || 420;
+    const r = Math.min(fw * 0.66, 290) / 2;
+    return [50, 50 + Math.sign(sn) * (r + 30) / fh * 100];
+  }
+  return [50 + 41 * Math.cos(a), 50 + 45 * sn];
+};
+const RANKS = [2,3,4,5,6,7,8,9,10,11,12,13,14];
+const NAMES = {'1':'Single','2':'Pair','3':'Triple',fh:'Full house',st:'Straight',tube:'Tube',plate:'Plate',bomb:'Bomb',sf:'Straight flush',kb:'Joker bomb'};
+const ls = { get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e) {} } };
+
+const E8 = () => Array(8).fill(null);
+let uid = null, code = null, seats = E8(), S = null, cfg = { n: 6, levels: [2, 2], decl: 0, timer: 20 };
+let preplay = new Map(), pre = new Set(), showHist = false, wasMine = false;
+let pn = {}, bySuit = ls.get('gd6suit') === '1';
+let unsubs = [], sel = new Set(), msg = '', msgErr = false, busy = false;
+
+function cardHTML(id, L, cls = '') {
+  const c = GD.P(id);
+  if (c.s === 'J') return `<div class="card jk ${c.r === 17 ? 'r' : ''} ${cls}" data-id="${esc(id)}">${c.r === 17 ? 'BIG' : 'SML'}<br>JKR<span class="big">★</span></div>`;
+  const red = c.s === 'H' || c.s === 'D';
+  return `<div class="card ${red ? 'r' : ''} ${GD.isWild(c, L) ? 'w' : ''} ${cls}" data-id="${esc(id)}">${RK(c.r)}<br>${SY[c.s]}<span class="big">${SY[c.s]}</span></div>`;
+}
+const comboText = c => c ? `${NAMES[c.t]}${c.t === 'bomb' ? ' ×' + c.n : ''}` : '';
+const place = n => ['1st','2nd','3rd','4th','5th','6th'][n];
+const teamDot = i => `<span class="dot" style="background:var(--t${GD.team(i)})"></span>`;
+const seatName = i => seats[i] ? (seats[i].name || pn[seats[i].uid] || 'Player ' + (i + 1)) : '';
+const nameOf = i => (S ? S.names[i] : seatName(i)) || 'Seat ' + (i + 1);
+const N = () => S ? S.n : cfg.n;
+const owners = () => S ? S.uids : seats.slice(0, N()).map(s => s?.uid || null);
+const mySeats = () => owners().map((u, i) => u === uid ? i : -1).filter(i => i >= 0);
+const TIMERS = [0, 10, 15, 20, 30, 45, 60];
+const pendRet = seat => !!S && S.phase === 'return' && S.tribute.some(x => typeof x === 'object' && x.to === seat && x.gave && !x.back);
+const payOf = seat => S && S.phase === 'return' ? S.tribute.find(x => typeof x === 'object' && x.from === seat && !x.gave) : null;
+const pendPay = seat => !!payOf(seat);
+function ctrlSeat() {
+  const m = mySeats(); if (!m.length) return -1;
+  if (S && S.phase === 'return') { const r = m.find(x => pendPay(x) || pendRet(x)); if (r !== undefined) return r; }
+  return S && m.includes(S.turn) ? S.turn : m[0];
+}
+// ---- server calls: every change goes through the "game" function, which checks it and saves it
+async function call(action, extra = {}) {
+  if (!sb || !uid) { say('Still connecting…', true); return false; }
+  try {
+    const { data, error } = await sb.functions.invoke('game', { body: { action, code, ...extra } });
+    if (error) { say('Could not reach the server. Check your connection and try again.', true); return false; }
+    if (data?.error) { if (data.error !== 'stale') say(data.error, true); refresh(); return false; }
+    return data || true;
+  } catch (e) { say('Could not reach the server.', true); return false; }
+}
+async function giveBackAct() {
+  const seat = ctrlSeat(), id = [...sel][0];
+  if (!id || busy) return;
+  busy = true; render();
+  const ok = await call(pendPay(seat) ? 'pay' : 'giveBack', { seat, id });
+  busy = false;
+  if (ok) { sel.clear(); msg = ''; }
+  render();
+}
+
+function say(t, err = false) { msg = t; msgErr = err; render(); }
+
+// ---- live table: the room row (public), my own hand rows, and who is online
+let sb = null, chan = null, online = new Set(), lastRead = 0, rowVer = -1, pub = null, myHands = {}, live = false;
+function build() {
+  if (!pub) { S = null; return; }
+  const d = JSON.parse(JSON.stringify(pub));
+  d.ver = rowVer;
+  d.hands = {};
+  for (let i = 0; i < d.n; i++) d.hands[i] = myHands[i] && d.uids[i] === uid ? myHands[i].cards.slice() : Array(d.counts?.[i] || 0).fill('?' + i);
+  (d.tribute || []).forEach(t => { if (typeof t === 'object' && !t.gave && myHands[t.from]?.opts) t.opts = myHands[t.from].opts; });
+  S = d;
+}
+function applyRow(row) {
+  if (!row || row.code !== code) return;
+  if (row.ver < rowVer) return;
+  rowVer = row.ver;
+  cfg = row.cfg || cfg;
+  seats = E8(); (row.seats || []).forEach((s, i) => { if (s && i < 8) seats[i] = s; });
+  pub = row.pub || null;
+  build(); render(); setTimeout(autoPass, 0);
+}
+function applyHand(h) {
+  if (!h || h.code !== code) return;
+  myHands[h.seat] = { cards: h.cards || [], opts: h.opts || null };
+  build(); render(); setTimeout(autoPass, 0);
+}
+async function refresh() {
+  if (!sb || !code) return;
+  lastRead = Date.now();
+  try {
+    const [{ data: row }, { data: hs }] = await Promise.all([
+      sb.from('rooms').select('code,cfg,seats,pub,ver').eq('code', code).maybeSingle(),
+      sb.from('hands').select('code,seat,cards,opts').eq('code', code),
+    ]);
+    if (!row) { say('Table ' + code + ' was not found. Check the code.', true); return; }
+    myHands = {}; (hs || []).forEach(h => { myHands[h.seat] = { cards: h.cards || [], opts: h.opts || null }; });
+    rowVer = -1; applyRow(row);
+  } catch (e) {}
+}
+function route() {
+  unsubs.forEach(u => u()); unsubs = []; S = null; pub = null; myHands = {}; rowVer = -1; seats = E8(); cfg = { n: 6, levels: [2, 2], decl: 0, timer: 20 }; sel.clear(); msg = '';
+  const m = location.hash.match(/^#t-([A-Z0-9]{4})$/);
+  code = m ? m[1] : null;
+  if (code && sb) {
+    refresh();
+    const c = code;
+    chan = sb.channel('table-' + c, { config: { presence: { key: uid } } })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: 'code=eq.' + c }, p => applyRow(p.new))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hands', filter: 'code=eq.' + c }, p => {
+        if (p.eventType === 'DELETE') { const s = p.old?.seat; if (s !== undefined) delete myHands[s]; build(); render(); }
+        else applyHand(p.new);
+      })
+      .on('presence', { event: 'sync' }, () => { online = new Set(Object.keys(chan?.presenceState() || {})); render(); })
+      .subscribe(st => {
+        live = st === 'SUBSCRIBED';
+        if (live) { chan.track({ at: Date.now() }); refresh(); }
+      });
+    const ch = chan;
+    unsubs.push(() => { sb.removeChannel(ch); chan = null; live = false; online = new Set(); });
+  }
+  render();
+}
+async function rename(v) {
+  ls.set('gd6name', v); $('#nm').value = v;
+  await call('rename', { name: v });
+}
+function autoPass() {
+  if (!S || busy || S.phase !== 'play' || S.undoReq) return;
+  const t = S.turn;
+  if (!mySeats().includes(t)) return;
+  if (preplay.has(t)) {
+    const ids = preplay.get(t); preplay.delete(t);
+    if (!ids.every(id => S.hands[t].includes(id))) return say('Pre-play cancelled: those cards are no longer in your hand.', true);
+    sel = new Set(ids);
+    if (!GD.choose(ids, S.L, S.last ? S.last.c : null, S.n)) { render(); return say(S.last ? "Pre-play cancelled: those cards don't beat what's on the table. They're still selected." : "Pre-play cancelled: that isn't a legal play. The cards are still selected.", true); }
+    return act('play');
+  }
+  if (!pre.has(t)) return;
+  pre.delete(t);
+  if (!S.last) { say('Pre-pass cancelled: you lead this trick, so you have to play.', true); return; }
+  act('pass');
+}
+// ---- turn timer (the server double-checks the time before accepting a time-out)
+const secs = () => (S && typeof S.timer === 'number') ? S.timer : 20;
+let tKey = null, tStart = 0, forcing = false;
+const timerOff = () => !S || !secs() || S.phase !== 'play' || !!S.undoReq || (S.hand === 1 && !S.log?.length && !S.last);
+function updateCd() {
+  const els = document.querySelectorAll('.cd');
+  if (timerOff()) { els.forEach(e => { e.textContent = ''; }); return; }
+  const left = Math.max(0, Math.ceil(secs() - (Date.now() - tStart) / 1000));
+  els.forEach(e => { e.textContent = left + 's'; e.classList.toggle('low', left <= 3); });
+}
+async function forceMove(seat) {
+  forcing = true;
+  await call('timeout', { seat });
+  forcing = false;
+}
+setInterval(() => {
+  if (timerOff()) { tKey = null; updateCd(); return; }
+  const key = S.hand + ':' + (S.turnAt || 0) + ':' + S.turn;
+  if (key !== tKey) { tKey = key; tStart = Date.now(); }
+  updateCd();
+  const el = (Date.now() - tStart) / 1000, mine = mySeats().includes(S.turn);
+  // the player's own phone acts when time is up; everyone else steps in 2.5 s later in case that phone is asleep
+  if (!forcing && !busy && mySeats().length && el >= (mine ? secs() : secs() + 2.5)) { tStart = Date.now() + 3000; forceMove(S.turn); }
+}, 250);
+// backup when the live connection drops: re-read the table every 4 s
+setInterval(() => { if (code && sb && !live && Date.now() - lastRead > 4000) refresh(); }, 1000);
+
+async function sit(i) {
+  const nm = ($('#nm').value || ls.get('gd6name') || '').trim();
+  if (await call('sit', { seat: i, name: nm })) say(`You sat in seat ${i + 1}, team ${TN[GD.team(i)]}.`);
+}
+async function fillAll() {
+  if (await call('fill')) say('Test mode: you hold every empty seat and play whoever is up.');
+}
+const stand = () => call('stand');
+async function startGame() { if (busy) return; busy = true; await call('start'); busy = false; render(); }
+async function saveCfg(c) { if (!S) await call('cfg', { cfg: c }); }
+async function toLobby() { if (busy) return; busy = true; await call('toLobby'); busy = false; render(); }
+async function nextHand() { if (busy) return; busy = true; await call('nextHand'); busy = false; render(); }
+
+const isHost = () => !!S && S.host === uid;
+async function act(kind) {
+  if (!S || busy) return;
+  const seat = ctrlSeat(), ids = [...sel];
+  if (S.undoReq) return say('Paused while the host decides on a take-back.', true);
+  // check locally first for an instant answer, show the move right away, then let the server confirm
+  const cur = JSON.parse(JSON.stringify(S));
+  const err = kind === 'play' ? GD.play(cur, seat, ids) : GD.pass(cur, seat);
+  if (err) return say(err, true);
+  cur.hasPrev = true; cur.prevSeat = seat; cur.timedOut = null;
+  S = cur; sel.clear(); msg = ''; busy = true; render();
+  const ok = await call(kind, kind === 'play' ? { seat, ids } : { seat });
+  busy = false;
+  if (!ok) refresh();
+  render(); setTimeout(autoPass, 0);
+}
+const askUndo = () => call('askUndo');
+const approveUndo = () => call('approveUndo');
+const denyUndo = () => call('denyUndo');
+
+function renderLevels() {
+  const el = $('#levels');
+  const lv = S ? S.levels : cfg.levels, dc = S ? S.decl : cfg.decl;
+  $('#sub').textContent = `Guandan · ${N()} players · ${N() / 2} decks`;
+  if (!code) { el.innerHTML = ''; return; }
+  el.innerHTML = [0,1].map(t => `<span class="${dc === t ? 'on' : ''}"><span class="dot" style="background:var(--t${t})"></span>${TN[t]} ${RK(lv[t])}</span>`).join('');
+}
+
+function render() {
+  $('#lobby').hidden = !!code; $('#table').hidden = !code;
+  const ban = $('#banner');
+  if (!uid) { ban.hidden = false; ban.textContent = bootErr || 'Connecting…'; }
+  else ban.hidden = true;
+  renderLevels();
+  if (!code) return;
+  $('#tcode').textContent = code;
+  const me = ctrlSeat(), base = me >= 0 ? me : 0, L = S ? S.L : 2;
+  const playing = S && S.phase === 'play';
+  // seats
+  let html = '';
+  const n = N();
+  renderSetup();
+  for (let i = 0; i < n; i++) {
+    const [x, y] = posOf((i - base + n) % n, n);
+    const taken = S ? true : !!seats[i];
+    let body = `<b>${teamDot(i)}${esc(taken ? nameOf(i) : 'Open seat')}</b>${(S ? S.uids[i] === S.host : seats[i] && seats[i].uid === cfg.host) ? '<span class="note">host</span>' : ''}`;
+    if (S) {
+      const nOut = S.out.indexOf(i);
+      const n = S.hands[i].length;
+      body += nOut >= 0 ? `<div class="n">${place(nOut)}</div>` : `<div><span class="n">${n > 10 && !mySeats().includes(i) ? '10+' : n}</span> cards</div>`;
+      if (playing && S.timedOut === i && !S.passed.includes(i)) body += `<div class="note">out of time</div>`;
+      if (playing && S.passed.includes(i)) body += `<div class="note">${S.timedOut === i ? 'out of time' : (S.autoPassed || []).includes(i) ? 'auto-passed' : 'passed'}</div>`;
+      if (playing && S.turn === i) body += `<span class="cd"></span>`;
+      if (S.phase === 'return' && pendPay(i)) body += `<div class="note">choosing tribute</div>`;
+      if (S.phase === 'return' && pendRet(i)) body += `<div class="note">giving a card back</div>`;
+      if (online.size && !online.has(S.uids[i])) body += `<div class="note">offline</div>`;
+    } else if (!taken) body += `<br><button data-sit="${i}">Sit here</button>`;
+    else if (seats[i]?.uid === uid) body += `<div class="note">you</div>`;
+    html += `<div class="seat ${playing && S.turn === i ? 'turn' : ''}" style="left:${x}%;top:${y}%">${body}</div>`;
+  }
+  let mid = '';
+  if (!S) {
+    const k = seats.slice(0, n).filter(Boolean).length;
+    mid = `<div><b>${k} of ${n} seated</b></div><div class="note">Pick a seat. Every other seat is your team.</div>`;
+    if (k === n && mySeats().length) mid += `<button id="start" style="margin-top:8px">Deal</button>`;
+    else if (mySeats().length) mid += `<button class="ghost" id="stand" style="margin-top:8px">Stand up</button>`;
+    if (k < n) mid += `<div><button class="ghost" id="fill" style="margin-top:8px;font-size:13px">Test alone</button></div>`;
+  } else if (S.phase === 'return') {
+    mid = `<div class="who">Tribute</div><div class="note" style="margin-top:6px">Hand ${S.hand} · level ${RK(L)}</div>`;
+  } else if (playing && S.last) {
+    const k = S.last.ids.length, room = Math.min(($('#felt').clientWidth || 360) * 0.6, 250), stp = k > 1 ? Math.max(18, Math.min(46, Math.floor((room - 72) / (k - 1)))) : 72;
+    mid = `<div class="mini" style="--step:${stp}px;padding-left:${72 - stp}px">${S.last.ids.map(id => cardHTML(id, L)).join('')}</div><div class="who">${esc(nameOf(S.last.seat))}: ${comboText(S.last.c)}</div>`;
+  } else if (playing) {
+    mid = `<div class="who">${esc(nameOf(S.turn))} leads</div><div class="note">Hand ${S.hand} · level ${RK(L)}</div>`;
+  }
+  $('#felt').className = 'felt' + (n === 8 ? ' n8' : '');
+  $('#felt').innerHTML = html + `<div class="mid">${mid}</div>`;
+  // hand
+  const hw = $('#handWrap');
+  hw.hidden = !(S && me >= 0 && (S.phase === 'play' || S.phase === 'return'));
+  if (!hw.hidden) {
+    const hand = S.hands[me];
+    [...sel].forEach(id => { if (!hand.includes(id)) sel.delete(id); });
+    const gs = getGroups(me).map(g => g.filter(id => hand.includes(id))).filter(g => g.length);
+    const inG = new Set(gs.flat());
+    const loose = sortBy(hand.filter(id => !inG.has(id)), L);
+    const ch = id => cardHTML(id, L, sel.has(id) ? 'sel' : '');
+    $('#hand').innerHTML = gs.map(g => `<div class="grp">${sortBy(g, L).map(ch).join('')}</div>`).join('') + loose.map(ch).join('');
+    $('#groupB').disabled = sel.size < 2;
+    $('#ungroupB').disabled = ![...sel].some(id => inG.has(id));
+    $('#sortB').textContent = bySuit ? 'Sort by rank' : 'Sort by suit';
+    const ret = S.phase === 'return', myPay = ret && payOf(me), myRet = ret && pendRet(me);
+    if (myPay) $('#hand').querySelectorAll('.card').forEach(el => { const c = GD.P(el.dataset.id); if (myPay.opts.some(o => { const q = GD.P(o); return q.s === c.s && q.r === c.r; })) el.classList.add('opt'); });
+    const myTurn = !ret && S.turn === me;
+    const mine = (myTurn && !S.undoReq) || myRet || !!myPay;
+    $('#turnBan').innerHTML = myPay ? 'PICK YOUR TRIBUTE CARD' : myRet ? 'GIVE A CARD BACK' : 'YOUR TURN <span class="cd"></span>';
+    $('#turnBan').classList.toggle('on', mine);
+    if (mine && !wasMine) { try { navigator.vibrate?.(200); } catch (e) {} }
+    wasMine = mine;
+    $('#histB').textContent = showHist ? 'Hide last plays' : 'Last plays';
+    const h = $('#hist'), lg = (S.log || []).slice().reverse();
+    h.hidden = !showHist;
+    if (showHist) h.innerHTML = lg.length ? lg.slice(0, 6).map((e, k) => `<div class="row"><div style="flex:0 0 96px;font-size:14px"><b>${esc(nameOf(e.seat))}</b><br><span class="note">${k === 0 && S.last ? 'on the table' : comboText(e.c)}</span></div><div class="mini">${(e.ids || []).map(id => cardHTML(id, L)).join('')}</div></div>`).join('') : '<span class="note">No plays yet this hand.</span>';
+
+    const pl = $('#playB'), pa = $('#passB'), qq = preplay.get(me), pOn = pre.has(me);
+    pa.hidden = false;
+    if (ret) {
+      pl.textContent = myPay ? 'Pay tribute' : myRet ? 'Give back' : 'Play'; pa.textContent = 'Pass';
+      pl.disabled = !(myRet || myPay) || sel.size !== 1 || busy; pa.disabled = true;
+      pl.classList.remove('on'); pa.classList.remove('on');
+    } else if (myTurn) {
+      pl.textContent = 'Play'; pa.textContent = 'Pass';
+      pl.disabled = !sel.size || busy || !!S.undoReq;
+      pa.disabled = !S.last || busy || !!S.undoReq;
+      pl.classList.remove('on'); pa.classList.remove('on');
+    } else {
+      pl.textContent = qq ? `Pre-play ✓ ${qq.length}` : 'Pre-play';
+      pa.textContent = pOn ? 'Pre-pass ✓' : 'Pre-pass';
+      pl.disabled = !qq && !sel.size;
+      pa.disabled = false;
+      pl.classList.toggle('on', !!qq); pa.classList.toggle('on', pOn);
+      if (qq) $('#hand').querySelectorAll('.card').forEach(el => { if (qq.includes(el.dataset.id)) el.classList.add('sel'); });
+    }
+  }
+  // take-back
+  let uh = '';
+  if (S && S.undoReq) {
+    const who = esc(nameOf(S.undoReq.seat));
+    uh = isHost() ? `<div class="panel"><b>${who}</b> wants to take back their last move.<div class="bar"><button id="okUndo">Approve</button><button class="ghost" id="noUndo">Deny</button></div></div>`
+      : `<div class="status">Paused: waiting for the host to approve ${who}'s take-back.</div>`;
+  } else if (S && S.hasPrev && mySeats().includes(S.prevSeat) && S.phase !== 'over') {
+    uh = `<button class="ghost" id="undoB" style="width:100%;margin-top:8px">${isHost() ? 'Take back my last move' : 'Ask the host to take back my last move'}</button>`;
+  }
+  $('#undo').innerHTML = uh;
+  // status
+  const st = $('#status');
+  let t = msg;
+  if (!t && S && S.phase === 'return') {
+    const mineT = S.tribute.find(x => typeof x === 'object' && x.to === me), myP = payOf(me);
+    if (myP) t = `Your highest card comes in more than one suit. Pick which one to pay to ${nameOf(myP.to)} (outlined), then tap Pay tribute.`;
+    else if (mineT && !mineT.gave) t = `Waiting for ${nameOf(mineT.from)} to pick which suit to pay you.`;
+    else if (mineT && !mineT.back) t = sel.size > 1 ? 'To give back, select just one card (you can still group and sort).' : `You received ${tributeCard(mineT.gave, L)} from ${nameOf(mineT.from)}. Pick one card of 10 or lower to give back, then tap Give back.`;
+    else t = S.tribute.filter(x => typeof x === 'object').map(x => !x.gave ? `Waiting for ${nameOf(x.from)} to pick a tribute card for ${nameOf(x.to)}.` : x.back ? `${nameOf(x.to)} gave ${tributeCard(x.back, L)} back to ${nameOf(x.from)}.` : `${nameOf(x.from)} paid ${tributeCard(x.gave, L)} to ${nameOf(x.to)}; waiting for ${nameOf(x.to)} to give a card back.`).join(' ');
+  }
+  if (!t && S && S.phase === 'play') {
+    if (me < 0) t = 'You are watching this game.';
+    else if (S.undoReq) t = 'Play is paused until the host decides.';
+    else if (S.turn === me) {
+      const c = sel.size ? GD.choose([...sel], L, S.last ? S.last.c : null, S.n) : null;
+      t = (mySeats().length > 1 ? `Playing as ${nameOf(me)}. ` : '') + (sel.size ? (c ? `${comboText(c)} — tap Play.` : (S.last ? "Selection doesn't beat the table." : 'Not a legal combination yet.')) : (S.last ? 'Your turn: beat it or pass.' : 'Your lead: play anything.'));
+    } else t = `Waiting for ${nameOf(S.turn)}…`;
+    if (S.tribute?.length && !S.log.length) t += ' ' + S.tribute.map(x => typeof x === 'string' ? x : `${nameOf(x.from)} paid ${tributeCard(x.gave, L)} to ${nameOf(x.to)}, got ${tributeCard(x.back, L)} back.`).join(' ');
+  }
+  if (!t && !S) t = mySeats().length ? `Waiting for ${n} players.` : 'Choose an open seat to join.';
+  st.textContent = t; st.className = 'status' + (msgErr ? ' err' : '');
+  updateCd();
+  // result
+  const res = $('#result');
+  if (S && S.result && (S.phase === 'done' || S.phase === 'over')) {
+    const r = S.result;
+    res.innerHTML = `<div class="panel"><h2>${S.phase === 'over' ? `Team ${TN[r.T]} wins the game!` : `Hand ${S.hand} result`}</h2>
+      <ol>${r.out.map(i => `<li>${teamDot(i)}${esc(nameOf(i))}</li>`).join('')}</ol>
+      <p>${S.phase === 'over' ? `They won the hand at their own level A (place total ${r.sum}).` : `Team ${TN[r.T]} wins the hand (place total ${r.sum}) and moves up ${r.up}: ${RK(r.before)} → ${RK(r.after)}. Next hand is played at ${RK(r.after)}.`}</p>
+      ${mySeats().length ? (S.phase === 'over' ? '<button id="newG">Back to setup for a new game</button>' : '<button id="nextH">Deal next hand</button>') : ''}</div>`;
+  } else res.innerHTML = '';
+}
+function renderSetup() {
+  const el = $('#setup');
+  el.hidden = !!S;
+  if (S) return;
+  if (document.activeElement?.id === 'nm2') return;
+  const ed = mySeats().length > 0;
+  const opt = (vals, cur, lab) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${lab(v)}</option>`).join('');
+  const dis = ed ? '' : 'disabled';
+  el.innerHTML = `<h2>Game setup</h2>
+    <div class="setup">
+      <label>Players<select id="cfN" data-cfg="1" ${dis}>${opt([4, 6, 8], cfg.n, v => `${v} players · ${v / 2} decks`)}</select></label>
+      <label><span><span class="dot" style="background:var(--t0)"></span>Jade starts on</span><select id="cfL0" data-cfg="1" ${dis}>${opt(RANKS, cfg.levels[0], RK)}</select></label>
+      <label><span><span class="dot" style="background:var(--t1)"></span>Amber starts on</span><select id="cfL1" data-cfg="1" ${dis}>${opt(RANKS, cfg.levels[1], RK)}</select></label>
+      <label>First hand uses<select id="cfD" data-cfg="1" ${dis}>${opt([0, 1], cfg.decl, v => `${TN[v]}'s level`)}</select></label>
+      <label>Turn timer<select id="cfT" data-cfg="1" ${dis}>${opt(TIMERS, cfg.timer ?? 20, v => v ? v + ' seconds' : 'Off')}</select></label>
+    </div>
+    <h2 style="font-size:18px">At the table · ${seats.slice(0, cfg.n).filter(Boolean).length} of ${cfg.n}</h2>
+    <ol style="margin-top:4px">${seats.slice(0, cfg.n).map((st, i) => `<li>${teamDot(i)}${st ? `<b>${esc(seatName(i))}</b>${st.uid === uid ? ' (you)' : ''}` : '<span class="note">open seat</span>'} <span class="note">· ${TN[GD.team(i)]}</span></li>`).join('')}</ol>
+    ${mySeats().length ? `<label style="display:grid;gap:4px;font-size:14px;font-weight:600;margin-bottom:12px">Your name at this table<input id="nm2" maxlength="16" value="${esc(ls.get('gd6name') || '')}" placeholder="Shown to everyone"></label>` : ''}
+    <p class="note">${ed ? 'Anyone seated can change these until the deal. Lowering the player count frees the extra seats.' : 'Take a seat to change the setup.'}</p>`;
+}
+const gkey = seat => `gd6g-${code}-${S?.hand}-${seat}`;
+const gmem = {};
+function getGroups(seat) {
+  const k = gkey(seat);
+  if (!(k in gmem)) { try { gmem[k] = JSON.parse(ls.get(k) || '[]'); } catch (e) { gmem[k] = []; } if (!Array.isArray(gmem[k])) gmem[k] = []; }
+  return gmem[k];
+}
+function setGroups(seat, g) { const k = gkey(seat); gmem[k] = g; ls.set(k, JSON.stringify(g)); }
+function sortBy(ids, L) {
+  if (!bySuit) return GD.sortHand(ids, L);
+  const O = 'JHSDC';
+  return GD.sortHand(ids, L).sort((a, b) => {
+    const A = GD.P(a), B = GD.P(b);
+    const ka = A.s === 'J' || GD.isWild(A, L) ? -1 : O.indexOf(A.s), kb = B.s === 'J' || GD.isWild(B, L) ? -1 : O.indexOf(B.s);
+    return ka - kb || (ka === -1 ? 0 : B.r - A.r);
+  });
+}
+const tributeCard = (id, L) => { const c = GD.P(id); return c.s === 'J' ? (c.r === 17 ? 'big joker' : 'small joker') : SY[c.s] + RK(c.r); };
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button, .card');
+  if (!t) return;
+  if (t.matches('#hand .card')) {
+    const id = t.dataset.id, g = getGroups(ctrlSeat()).find(g => g.includes(id));
+    const ids = g ? g.filter(x => S.hands[ctrlSeat()].includes(x)) : [id];
+    const on = !sel.has(id);
+    ids.forEach(x => on ? sel.add(x) : sel.delete(x));
+    msg = ''; render(); return;
+  }
+  if (t.dataset.sit) return sit(+t.dataset.sit);
+  switch (t.id) {
+    case 'create': {
+      ls.set('gd6name', $('#nm').value.trim());
+      call('create').then(r => { if (r?.code) location.hash = 't-' + r.code; });
+      break;
+    }
+    case 'undoB': askUndo(); break;
+    case 'okUndo': approveUndo(); break;
+    case 'noUndo': denyUndo(); break;
+    case 'join': { ls.set('gd6name', $('#nm').value.trim()); const c = $('#jc').value.trim().toUpperCase(); if (/^[A-Z0-9]{4}$/.test(c)) location.hash = 't-' + c; else say('Codes are 4 letters or numbers.', true); break; }
+    case 'copy': navigator.clipboard?.writeText(location.href).then(() => say('Invite link copied. Anyone who opens it joins this table.'), () => say('Table code: ' + code)); break;
+    case 'leaveT': location.hash = ''; break;
+    case 'start': startGame(); break;
+    case 'stand': stand(); break;
+    case 'fill': fillAll(); break;
+    case 'playB': {
+      const me = ctrlSeat();
+      if (!S || me < 0) break;
+      if (S.phase === 'return') { giveBackAct(); break; }
+      if (S.turn === me) { act('play'); break; }
+      if (preplay.has(me)) { preplay.delete(me); say('Pre-play cancelled.'); break; }
+      const ids = [...sel];
+      if (!ids.length) break;
+      if (!GD.analyze(ids, S.L, S.n).length) { say("Those cards aren't a legal combination.", true); break; }
+      preplay.set(me, ids); pre.delete(me); sel.clear();
+      say(`Pre-play set: ${ids.length} card${ids.length > 1 ? 's' : ''} will play the moment your turn comes, if they beat the table. Tap again to cancel.`); break;
+    }
+    case 'passB': {
+      const me = ctrlSeat();
+      if (!S || me < 0) break;
+      if (S.turn === me) { act('pass'); break; }
+      if (pre.has(me)) { pre.delete(me); msg = ''; }
+      else { pre.add(me); preplay.delete(me); msg = 'Pre-pass set: you will pass automatically when your turn comes.'; msgErr = false; }
+      render(); break;
+    }
+    case 'clearB': sel.clear(); msg = ''; render(); break;
+    case 'groupB': { const me = ctrlSeat(), ids = [...sel]; setGroups(me, [...getGroups(me).map(g => g.filter(x => !sel.has(x))).filter(g => g.length), ids]); sel.clear(); render(); break; }
+    case 'ungroupB': { const me = ctrlSeat(); setGroups(me, getGroups(me).filter(g => !g.some(x => sel.has(x)))); sel.clear(); render(); break; }
+    case 'histB': showHist = !showHist; render(); break;
+    case 'sortB': bySuit = !bySuit; ls.set('gd6suit', bySuit ? '1' : ''); render(); break;
+    case 'nextH': nextHand(); break;
+    case 'newG': toLobby(); break;
+  }
+});
+$('#nm').value = ls.get('gd6name') || '';
+$('#nm').addEventListener('change', () => ls.set('gd6name', $('#nm').value.trim()));
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'nm2') return rename(t.value.trim());
+  if (!t.dataset.cfg) return;
+  const c = { n: +$('#cfN').value, levels: [+$('#cfL0').value, +$('#cfL1').value], decl: +$('#cfD').value, timer: +$('#cfT').value };
+  cfg = c; render(); saveCfg(c);
+});
+window.addEventListener('hashchange', route);
+
+// ---- start up: connect to Supabase and sign in anonymously (the sign-in is remembered on this device)
+let bootErr = '';
+(async () => {
+  const C = window.GUANDAN_CONFIG || {};
+  if (!window.supabase || !C.url || !C.anonKey || C.url.includes('YOUR-')) { bootErr = 'This copy is not connected to a server yet (fill in config.js).'; render(); return; }
+  sb = window.supabase.createClient(C.url, C.anonKey);
+  let { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    const { data, error } = await sb.auth.signInAnonymously();
+    if (error) { bootErr = 'Could not sign in: ' + error.message; render(); return; }
+    session = data.session;
+  }
+  uid = session.user.id;
+  sb.realtime.setAuth(session.access_token);
+  sb.auth.onAuthStateChange((_e, sess) => { if (sess) sb.realtime.setAuth(sess.access_token); });
+  route();
+})();
+render();
+}
+</script>
+</body></html>
