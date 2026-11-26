@@ -26,6 +26,11 @@ create table if not exists public.hands (
   primary key (code, seat)
 );
 
+-- Players may read rooms and (through the policy below) their own hand; nobody may write directly.
+grant select on public.rooms, public.hands to authenticated;
+revoke insert, update, delete on public.rooms, public.hands, public.room_private from anon, authenticated;
+revoke select on public.room_private from anon, authenticated;
+
 alter table public.rooms enable row level security;
 alter table public.room_private enable row level security;
 alter table public.hands enable row level security;
