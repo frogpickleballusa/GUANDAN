@@ -256,7 +256,7 @@ function build() {
   S = d;
 }
 // ---- play animation: how cards arrive in the middle depends on what was played
-let playKey = null, animUntil = 0;
+let playKey = null, animUntil = 0, playedFrom = {};
 function animatePlay(me) {
   if (!S || !S.last || S.phase !== 'play') { if (S) playKey = code + ':' + S.hand + ':' + (S.log?.length || 0); return; }
   const key = code + ':' + S.hand + ':' + (S.log?.length || 0) + ':' + S.last.seat;
@@ -266,39 +266,47 @@ function animatePlay(me) {
   if (first || dealing || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const cards = [...document.querySelectorAll('#felt .mid .mini .card')];
   if (!cards.length) return;
-  animUntil = Date.now() + 1000;
+  animUntil = Date.now() + 1400;
   const seatEl = document.querySelectorAll('#felt .seat')[S.last.seat];
   const from = S.last.seat === me && $('#hand') ? $('#hand') : seatEl;
   if (!from) return;
   const fr = from.getBoundingClientRect(), ox = fr.left + fr.width / 2, oy = fr.top + Math.min(fr.height / 2, 60);
+  const mineNow = S.last.seat === me;
+  const originOf = el => (mineNow && playedFrom[el.dataset.id]) || [ox, oy];
+  const o0 = mineNow ? 1 : .5;   // your own cards stay solid as they leave your hand
   const t = S.last.c.t, k = cards.length, midI = (k - 1) / 2;
   const isBomb = t === 'bomb' || t === 'sf' || t === 'kb';
   cards.forEach((el, i) => {
-    const r = el.getBoundingClientRect(), dx = ox - (r.left + r.width / 2), dy = oy - (r.top + r.height / 2);
+    const r = el.getBoundingClientRect(), [sx, sy] = originOf(el), dx = sx - (r.left + r.width / 2), dy = sy - (r.top + r.height / 2);
     let frames, opt;
-    if (isBomb) {                                             // slam down
+    if (isBomb) {                                             // slam down: lift out of the hand, rise, then smash onto the table
       frames = [
-        { transform: `translate(${dx * .25}px,${dy * .25 - 140}px) scale(1.9)`, opacity: 0 },
-        { transform: 'translate(0,0) scale(.9)', opacity: 1, offset: .7 },
-        { transform: 'translate(0,0) scale(1.04)', offset: .85 },
+        { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: 1, easing: 'cubic-bezier(.2,.7,.3,1)' },
+        { transform: `translate(${dx * .25}px,${dy * .25 - 120}px) scale(1.8)`, opacity: 1, offset: .5, easing: 'cubic-bezier(.6,0,.9,.4)' },
+        { transform: 'translate(0,0) scale(.9)', opacity: 1, offset: .82 },
+        { transform: 'translate(0,0) scale(1.04)', offset: .91 },
         { transform: 'translate(0,0) scale(1)', opacity: 1 }];
-      opt = { duration: 420, delay: i * 35, easing: 'cubic-bezier(.5,0,.75,0)' };
-    } else if (t === 'tube' || t === 'plate') {               // fan and slide
+      opt = { duration: 560, delay: i * 30 };
+    } else if (t === 'tube' || t === 'plate') {
+      // ribbon: cards follow one another along a smooth arc into the row
+      const lift = -70 - Math.abs(dx) * .15;
       frames = [
-        { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .4 },
-        { transform: `translate(${(i - midI) * 22}px,-26px) rotate(${(i - midI) * 9}deg)`, opacity: 1, offset: .55 },
-        { transform: 'translate(0,0) rotate(0)', opacity: 1 }];
-      opt = { duration: 560, delay: 0, easing: 'cubic-bezier(.3,.8,.3,1)' };
+        { transform: `translate(${dx}px,${dy}px) rotate(0) scale(${mineNow ? 1 : .8})`, opacity: o0 },
+        { transform: `translate(${dx * .55}px,${dy * .55 + lift}px) rotate(${(i - midI) * -6}deg) scale(1.08)`, opacity: 1, offset: .45 },
+        { transform: `translate(${dx * .12}px,${lift * .35}px) rotate(${(i - midI) * 3}deg) scale(1.04)`, offset: .78 },
+        { transform: 'translate(0,0) rotate(0) scale(1)', opacity: 1 }];
+      opt = { duration: 720, delay: i * 55, easing: 'cubic-bezier(.45,.05,.25,1)' };
     } else if (t === 'fh' || t === 'st') {                    // toss and spin
       const spin = (i % 2 ? 1 : -1) * (220 + i * 25);
       frames = [
-        { transform: `translate(${dx}px,${dy}px) rotate(${spin}deg) scale(.7)`, opacity: .5 },
+        { transform: `translate(${dx}px,${dy}px) rotate(${mineNow ? 0 : spin}deg) scale(${mineNow ? 1 : .7})`, opacity: o0 },
+        { transform: `translate(${dx * .45}px,${dy * .45 - 24}px) rotate(${mineNow ? -spin * .7 : spin * .4}deg) scale(1)`, opacity: 1, offset: .4 },
         { transform: `translate(${(i - midI) * 4}px,4px) rotate(${(i % 2 ? 7 : -7)}deg) scale(1.02)`, opacity: 1, offset: .8 },
         { transform: 'translate(0,0) rotate(0) scale(1)', opacity: 1 }];
       opt = { duration: 520, delay: i * 45, easing: 'cubic-bezier(.15,.7,.3,1)' };
     } else {                                                  // fly to center
       frames = [
-        { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .5 },
+        { transform: `translate(${dx}px,${dy}px) scale(${mineNow ? 1 : .8})`, opacity: o0 },
         { transform: 'translate(0,-8px) scale(1.06)', opacity: 1, offset: .75 },
         { transform: 'translate(0,0) scale(1)', opacity: 1 }];
       opt = { duration: 320, delay: i * 30, easing: 'cubic-bezier(.2,.8,.3,1)' };
@@ -307,7 +315,7 @@ function animatePlay(me) {
   });
   if (isBomb) {                                               // bombs: table shake + gold flash, harder for bigger bombs
     const hit = t === 'kb' ? 2.2 : Math.min(2, 0.8 + (S.last.c.n - 4) * 0.15);
-    const land = 300 + (k - 1) * 35;
+    const land = 460 + (k - 1) * 30;
     const felt = $('#felt'), f = document.createElement('div'); f.className = 'flash'; felt.appendChild(f);
     f.animate([{ opacity: 0 }, { opacity: Math.min(1, .5 + hit * .2) }, { opacity: 0 }], { duration: 500, delay: land, easing: 'ease-out' }).onfinish = () => f.remove();
     const a = 5 * hit;
@@ -444,7 +452,8 @@ const timerOff = () => !S || !secs() || S.phase !== 'play' || !!S.undoReq || (S.
 function updateCd() {
   const els = document.querySelectorAll('.cd');
   if (timerOff()) { els.forEach(e => { e.textContent = ''; }); return; }
-  const left = Math.max(0, Math.ceil(secs() - (Date.now() - tStart) / 1000));
+  const fresh = (S.hand + ':' + (S.turnAt || 0) + ':' + S.turn) !== tKey;   // turn just changed: show a full clock
+  const left = fresh ? secs() : Math.max(0, Math.ceil(secs() - (Date.now() - tStart) / 1000));
   els.forEach(e => { e.textContent = left + 's'; e.classList.toggle('low', left <= 3); });
 }
 async function forceMove(seat) {
@@ -485,6 +494,11 @@ async function act(kind) {
   // check locally first for an instant answer, show the move right away, then let the server confirm
   const cur = JSON.parse(JSON.stringify(S));
   const err = kind === 'play' ? GD.play(cur, seat, ids) : GD.pass(cur, seat);
+  if (!err && kind === 'play') {
+    // remember where each played card sat in your hand, so it flies out from that exact spot
+    playedFrom = {};
+    ids.forEach(id => { const el = $('#hand').querySelector(`.card[data-id="${id}"]`); if (el) { const r = el.getBoundingClientRect(); playedFrom[id] = [r.left + r.width / 2, r.top + r.height / 2]; } });
+  }
   if (err) return say(err, true);
   cur.hasPrev = true; cur.prevSeat = seat; cur.timedOut = null;
   S = cur; sel.clear(); msg = ''; busy = true; render();
