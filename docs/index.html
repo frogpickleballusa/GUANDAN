@@ -201,10 +201,15 @@ async function call(action, extra = {}) {
   if (!sb || !uid) { say('Still connecting…', true); return false; }
   try {
     const { data, error } = await sb.functions.invoke('game', { body: { action, code, ...extra } });
-    if (error) { say('Could not reach the server. Check your connection and try again.', true); return false; }
+    if (error) {
+      let detail = '';
+      try { const r = error.context; if (r && typeof r.text === 'function') { detail = (await r.text()).slice(0, 200); if (r.status) detail = r.status + ' ' + detail; } } catch (e) {}
+      say('Could not reach the server' + (detail ? ': ' + detail : ' (' + (error.message || 'no answer') + ')') + '. Is the "game" function deployed?', true);
+      return false;
+    }
     if (data?.error) { if (data.error !== 'stale') say(data.error, true); refresh(); return false; }
     return data || true;
-  } catch (e) { say('Could not reach the server.', true); return false; }
+  } catch (e) { say('Could not reach the server: ' + (e?.message || e), true); return false; }
 }
 async function giveBackAct() {
   const seat = ctrlSeat(), id = [...sel][0];
@@ -370,7 +375,8 @@ function renderLevels() {
 function render() {
   $('#lobby').hidden = !!code; $('#table').hidden = !code;
   const ban = $('#banner');
-  if (!uid) { ban.hidden = false; ban.textContent = bootErr || 'Connecting…'; }
+  if (!uid) { ban.hidden = false; ban.textContent = bootErr || 'Connecting…'; ban.className = 'status' + (bootErr ? ' err' : ''); }
+  else if (!code && msg) { ban.hidden = false; ban.textContent = msg; ban.className = 'status' + (msgErr ? ' err' : ''); }
   else ban.hidden = true;
   renderLevels();
   if (!code) return;
@@ -559,6 +565,7 @@ document.addEventListener('click', e => {
   switch (t.id) {
     case 'create': {
       ls.set('gd6name', $('#nm').value.trim());
+      say('Creating a table…');
       call('create').then(r => { if (r?.code) location.hash = 't-' + r.code; });
       break;
     }
