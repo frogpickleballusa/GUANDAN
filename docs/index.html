@@ -615,7 +615,7 @@ window.addEventListener('hashchange', route);
 let bootErr = '';
 (async () => {
   const C = window.GUANDAN_CONFIG || {};
-  if (!window.supabase || !C.url || !C.anonKey || C.url.includes('YOUR-')) { bootErr = 'This copy is not connected to a server yet (fill in config.js).'; render(); return; }
+  if (!window.supabase || !C.url || !C.anonKey || C.url.includes('YOUR-') || C.anonKey.includes('YOUR-')) { bootErr = 'This copy is not connected to a server yet (fill in config.js).'; render(); return; }
   sb = window.supabase.createClient(C.url, C.anonKey);
   let { data: { session } } = await sb.auth.getSession();
   if (!session) {
