@@ -1,7 +1,9 @@
 // Server-side table logic. Pure: takes the stored room + full game state and one request,
 // returns the new room, full state and per-seat private hands. Runs in Node (tests) and Deno (edge function).
 (function (C) {
-  const GD = typeof module !== 'undefined' && typeof require !== 'undefined' ? require('./engine.js') : globalThis.GD;
+  const NODE = typeof module !== 'undefined' && typeof require !== 'undefined';
+  const GD = NODE ? require('./engine.js') : globalThis.GD;
+  const BOT = NODE ? require('./bot.js') : globalThis.BOT;
   const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
   const TIMERS = [0, 10, 15, 20, 30, 45, 60];
   const clone = x => JSON.parse(JSON.stringify(x));
@@ -68,6 +70,17 @@
         if (full) return { err: 'A game is already running.' };
         for (let i = 0; i < n; i++) if (!room.seats[i]) room.seats[i] = { uid, name: 'Me ' + (i + 1) };
         return res(room, full);
+      case 'addBots':
+        if (full) return { err: 'A game is already running.' };
+        if (!mine.length && room.cfg.host !== uid) return { err: 'Take a seat first.' };
+        for (let i = 0; i < n; i++) if (!room.seats[i]) room.seats[i] = { uid: BOT.botUid(i), name: 'Bot ' + (i + 1), bot: true };
+        return res(room, full);
+      case 'removeBot': {
+        if (full) return { err: 'A game is already running.' };
+        const i = req.seat;
+        if (Number.isInteger(i) && room.seats[i] && BOT.isBot(room.seats[i].uid)) room.seats[i] = null;
+        return res(room, full);
+      }
       case 'rename':
         mine.forEach(j => { room.seats[j].name = cleanName(req.name); });
         return res(room, full);
@@ -154,6 +167,14 @@
         if (full.host !== uid) return { err: 'Only the host can deny.' };
         delete full.undoReq;
         return commit();
+      case 'botMove': {
+        // any seated person's page nudges the server when a bot is due; the version check stops double moves
+        if (!full.uids.includes(uid)) return { err: 'Only players can do that.' };
+        if (req.ver !== room.ver || full.undoReq) return { err: 'stale' };
+        if (!BOT.act(full)) return { err: 'stale' };
+        delete full.prev;
+        return commit();
+      }
       case 'nextHand':
         if (full.phase !== 'done' || full.undoReq) return { err: 'Not ready for the next hand.' };
         if (!full.uids.includes(uid)) return { err: 'Only players can deal.' };

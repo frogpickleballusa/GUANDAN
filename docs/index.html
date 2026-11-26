@@ -153,6 +153,7 @@ select{font:inherit;font-size:16px;min-height:44px;border-radius:12px;border:1.5
       <li>Take-back: the player who just moved can ask to undo that one move. The table pauses until the host (whoever created the table) approves or denies it. The host's own take-backs need no approval.</li>
       <li>Pre-pass: tap Pass before your turn and you pass automatically the moment your turn comes (once). If the table has been cleared and you would lead, it cancels instead. When it isn't your turn, Play and Pass become Pre-play and Pre-pass. Pre-play: select cards and tap it; they are played the moment your turn comes if they beat the table, otherwise it cancels and leaves them selected. Other players' card counts show as 10+ until they are down to 10. Last plays shows the most recent plays of the hand, newest first.</li>
       <li>Turn timer: set in game setup (Off, or 10 to 60 seconds, default 20). It applies to every turn except the very first turn of the game. If time runs out you pass; if you were leading a new trick, the lead moves to the next player.</li>
+      <li>Bots: the host (or anyone seated) can fill empty seats with bots before the deal. Bots only see their own cards, play their lowest cards first, don't beat their teammates, and save bombs for when an opponent is close to going out.</li>
       <li>Auto-pass: if it's your turn, you have fewer than 4 cards, and the play on the table uses more cards than you hold, you pass automatically. Only the number of cards counts, never their values.</li>
       <li>When you go out and nobody beats your last play, your next teammate still holding cards leads.</li>
       <li>The hand ends once only one team still has cards. Add up each team's finishing places (1st = 1, 2nd = 2 …); the lower total wins the hand, and a tie goes to the team that went out first. Taking all the top places moves up 3; the rest scale down to +2 or +1. With 4 players this is the usual 1-2 = +3, 1-3 = +2, 1-4 = +1. With 6 players: total 6 = +3, 7–8 = +2, 9–10 = +1.</li>
@@ -384,7 +385,19 @@ function applyRow(row) {
   cfg = row.cfg || cfg;
   seats = E8(); (row.seats || []).forEach((s, i) => { if (s && i < 8) seats[i] = s; });
   pub = row.pub || null;
-  build(); render(); setTimeout(autoPass, 0);
+  build(); render(); setTimeout(autoPass, 0); scheduleBot();
+}
+// ---- bots: the server decides their moves; seated players' pages just say "a bot is due"
+const isBotUid = u => typeof u === 'string' && u.startsWith('00000000-0000-4000-8000-0000000000b');
+let botTimer = null;
+function scheduleBot() {
+  clearTimeout(botTimer);
+  if (!S || !mySeats().length || S.undoReq) return;
+  const due = (S.phase === 'play' && isBotUid(S.uids[S.turn])) ||
+    (S.phase === 'return' && (S.tribute || []).some(t => typeof t === 'object' && ((!t.gave && isBotUid(S.uids[t.from])) || (t.gave && !t.back && isBotUid(S.uids[t.to])))));
+  if (!due) return;
+  const v = rowVer, wait = isHost() ? 1100 : 3200 + Math.random() * 1500;   // the host's page goes first; others back it up
+  botTimer = setTimeout(() => { if (rowVer === v) call('botMove', { ver: v }); }, wait);
 }
 function applyHand(h) {
   if (!h || h.code !== code) return;
@@ -470,7 +483,7 @@ setInterval(() => {
   updateCd();
   const el = (Date.now() - tStart) / 1000, mine = mySeats().includes(S.turn);
   // the player's own phone acts when time is up; everyone else steps in 2.5 s later in case that phone is asleep
-  if (!forcing && !busy && mySeats().length && el >= (mine ? secs() : secs() + 2.5)) { tStart = Date.now() + 3000; forceMove(S.turn); }
+  if (!forcing && !busy && mySeats().length && !isBotUid(S.uids[S.turn]) && el >= (mine ? secs() : secs() + 2.5)) { tStart = Date.now() + 3000; forceMove(S.turn); }
 }, 250);
 // backup when the live connection drops: re-read the table every 4 s
 setInterval(() => { if (code && sb && !live && Date.now() - lastRead > 4000) refresh(); }, 1000);
@@ -549,9 +562,11 @@ function render() {
       if (playing && S.turn === i) body += `<span class="cd"></span>`;
       if (S.phase === 'return' && pendPay(i)) body += `<div class="note">choosing tribute</div>`;
       if (S.phase === 'return' && pendRet(i)) body += `<div class="note">giving a card back</div>`;
-      if (online.size && !online.has(S.uids[i])) body += `<div class="note">offline</div>`;
+      if (isBotUid(S.uids[i])) body += `<div class="note">bot</div>`;
+      else if (online.size && !online.has(S.uids[i])) body += `<div class="note">offline</div>`;
     } else if (!taken) body += `<br><button data-sit="${i}">Sit here</button>`;
     else if (seats[i]?.uid === uid) body += `<div class="note">you</div>`;
+    else if (isBotUid(seats[i]?.uid) && mySeats().length) body += `<br><button class="ghost" data-unbot="${i}">Remove bot</button>`;
     html += `<div class="seat ${playing && S.turn === i ? 'turn' : ''}" style="left:${x}%;top:${y}%">${body}</div>`;
   }
   let mid = '';
@@ -689,7 +704,8 @@ function renderSetup() {
       <label>Turn timer<select id="cfT" data-cfg="1" ${dis}>${opt(TIMERS, cfg.timer ?? 20, v => v ? v + ' seconds' : 'Off')}</select></label>
     </div>
     <h2 style="font-size:18px">At the table · ${seats.slice(0, cfg.n).filter(Boolean).length} of ${cfg.n}</h2>
-    <ol style="margin-top:4px">${seats.slice(0, cfg.n).map((st, i) => `<li>${teamDot(i)}${st ? `<b>${esc(seatName(i))}</b>${st.uid === uid ? ' (you)' : ''}` : '<span class="note">open seat</span>'} <span class="note">· ${TN[GD.team(i)]}</span></li>`).join('')}</ol>
+    <ol style="margin-top:4px">${seats.slice(0, cfg.n).map((st, i) => `<li>${teamDot(i)}${st ? `<b>${esc(seatName(i))}</b>${st.uid === uid ? ' (you)' : isBotUid(st.uid) ? ' (bot)' : ''}` : '<span class="note">open seat</span>'} <span class="note">· ${TN[GD.team(i)]}</span></li>`).join('')}</ol>
+    ${ed && seats.slice(0, cfg.n).some(x => !x) ? '<button class="ghost" id="botsB" style="margin-bottom:12px">Fill empty seats with bots</button>' : ''}
     ${mySeats().length ? `<label style="display:grid;gap:4px;font-size:14px;font-weight:600;margin-bottom:12px">Your name at this table<input id="nm2" maxlength="16" value="${esc(ls.get('gd6name') || '')}" placeholder="Shown to everyone"></label>` : ''}
     <p class="note">${ed ? 'Anyone seated can change these until the deal. Lowering the player count frees the extra seats.' : 'Take a seat to change the setup.'}</p>`;
 }
@@ -724,6 +740,7 @@ document.addEventListener('click', e => {
     msg = ''; render(); return;
   }
   if (t.dataset.sit) return sit(+t.dataset.sit);
+  if (t.dataset.unbot) return call('removeBot', { seat: +t.dataset.unbot });
   switch (t.id) {
     case 'create': {
       ls.set('gd6name', $('#nm').value.trim());
@@ -740,6 +757,7 @@ document.addEventListener('click', e => {
     case 'start': startGame(); break;
     case 'stand': stand(); break;
     case 'fill': fillAll(); break;
+    case 'botsB': call('addBots'); break;
     case 'playB': {
       const me = ctrlSeat();
       if (!S || me < 0) break;
