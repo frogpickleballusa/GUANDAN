@@ -44,8 +44,14 @@
     return out;
   }
 
-  // Choose a play for `seat` (or null to pass). Uses only the bot's own hand and the public table.
-  function decide(S, seat) {
+  // Choose a play for `seat` (or null to pass). Uses only the bot's own hand, the table and card counts.
+  // level 'medium' plays its own hand well; 'hard' also plays for its team (feeds a teammate who is
+  // nearly out, avoids handing an opponent the shape they can go out on, and blocks opponents harder).
+  function decide(S, seat, level) {
+    if (level === 'hard') return decideHard(S, seat);
+    return decideMedium(S, seat);
+  }
+  function decideMedium(S, seat) {
     const hand = S.hands[seat], L = S.L, n = S.n;
     const table = S.last ? S.last.c : null;
     const team = GD.team;
@@ -78,6 +84,61 @@
     return null;
   }
 
+  function decideHard(S, seat) {
+    const hand = S.hands[seat], L = S.L, n = S.n, team = GD.team;
+    const table = S.last ? S.last.c : null;
+    const live = i => S.hands[i].length > 0;
+    const mates = [], opps = [];
+    for (let i = 0; i < n; i++) if (i !== seat && live(i)) (team(i) === team(seat) ? mates : opps).push(i);
+    const mateMin = mates.length ? Math.min(...mates.map(i => S.hands[i].length)) : 99;
+    // tuned in bot-vs-bot games: feed only a teammate on their last card; guard against opponents on 1 card
+    // (or 1-2 cards in 4-player games, where only one opponent sits between partners)
+    const SAFE_MAX = n === 4 ? 2 : 1, FEED_MAX = 1;
+    const oppSizes = new Set(opps.map(i => S.hands[i].length).filter(k => k <= SAFE_MAX));
+    const cands = candidates(hand, L).map(x => ({ ...x, c: GD.choose(x.ids, L, table, n) })).filter(x => x.c);
+    if (!cands.length) return null;
+    const cost = x => (x.c.p ? 1000 + x.c.p * 10 + x.c.v : 0) + (x.breaks ? 300 : 0) + (x.wild ? 200 : 0) + x.c.v;
+    const finishing = cands.find(x => x.ids.length === hand.length);
+    if (finishing) return finishing.ids;                       // going out always comes first
+    const simple = x => !x.c.p && ['1', '2', '3'].includes(x.c.t);
+    if (!table) {
+      // a teammate is on their last card: lead our lowest single so they can go out
+      if (mateMin <= FEED_MAX) {
+        const feed = cands.filter(x => simple(x) && x.ids.length === mateMin).sort((a, b) => a.c.v - b.c.v || (a.breaks - b.breaks));
+        if (feed.length) return feed[0].ids;
+      }
+      // don't lead a shape an opponent could go out on
+      const plain = cands.filter(x => !x.c.p);
+      const safe = plain.filter(x => !(oppSizes.has(x.ids.length) && simple(x)));
+      if (safe.length) {
+        safe.sort((a, b) => (cost(a) - cost(b)) || (b.ids.length - a.ids.length));
+        const lowV = safe[0].c.v;
+        const same = safe.filter(x => x.c.v <= lowV + 1 && !x.breaks && !x.wild).sort((a, b) => b.ids.length - a.ids.length);
+        return (same[0] || safe[0]).ids;
+      }
+      // only risky shapes left: lead the highest one so it is hard to beat
+      const pool = (plain.length ? plain : cands).sort((a, b) => b.c.v - a.c.v);
+      return pool[0].ids;
+    }
+    const lastSeat = S.last.seat;
+    if (team(lastSeat) === team(seat)) return null;            // never take a trick from a teammate
+    // the player who just played is close to going out: beat it, even breaking pairs or bombing
+    const threat = S.hands[lastSeat].length <= 3 && !mates.some(i => S.hands[i].length < S.hands[lastSeat].length);
+    const plain = cands.filter(x => !x.c.p).sort((a, b) => cost(a) - cost(b));
+    if (threat) {
+      if (plain.length) return plain[0].ids;
+      const bombs = cands.filter(x => x.c.p).sort((a, b) => cost(a) - cost(b));
+      if (bombs.length) return bombs[0].ids;
+      return null;
+    }
+    // a teammate is nearly out and could win the lead after us: take tricks cheaply so we can feed them
+    if (plain.length && !(plain[0].breaks && plain[0].c.v >= 14 && hand.length > 8)) return plain[0].ids;
+    const oppCards = S.hands[lastSeat].length;
+    const bombs = cands.filter(x => x.c.p).sort((a, b) => cost(a) - cost(b));
+    if (bombs.length && (oppCards <= 10 || hand.length <= 8 || mateMin <= 3)) return bombs[0].ids;
+    return null;
+  }
+
   // Apply every pending bot action that is due right now. Returns true if anything changed.
   function act(S) {
     let changed = false;
@@ -96,7 +157,7 @@
       return changed;
     }
     if (S.phase === 'play' && isBot(S.uids[S.turn])) {
-      const seat = S.turn, ids = decide(S, seat);
+      const seat = S.turn, ids = decide(S, seat, (S.botLevels || [])[seat] || 'medium');
       let err = ids ? GD.play(S, seat, ids) : (S.last ? GD.pass(S, seat) : 'lead');
       if (err) {   // safety net: lowest single, or pass
         err = S.last ? GD.pass(S, seat) : GD.play(S, seat, [GD.sortHand(S.hands[seat], S.L).pop()]);

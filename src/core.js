@@ -73,12 +73,18 @@
       case 'addBots':
         if (full) return { err: 'A game is already running.' };
         if (!mine.length && room.cfg.host !== uid) return { err: 'Take a seat first.' };
-        for (let i = 0; i < n; i++) if (!room.seats[i]) room.seats[i] = { uid: BOT.botUid(i), name: 'Bot ' + (i + 1), bot: true };
+        for (let i = 0; i < n; i++) if (!room.seats[i]) room.seats[i] = { uid: BOT.botUid(i), name: 'Bot ' + (i + 1), bot: true, level: req.level === 'hard' ? 'hard' : 'medium' };
         return res(room, full);
       case 'removeBot': {
         if (full) return { err: 'A game is already running.' };
         const i = req.seat;
         if (Number.isInteger(i) && room.seats[i] && BOT.isBot(room.seats[i].uid)) room.seats[i] = null;
+        return res(room, full);
+      }
+      case 'botLevel': {
+        if (full) return { err: 'A game is already running.' };
+        const i = req.seat;
+        if (Number.isInteger(i) && room.seats[i] && BOT.isBot(room.seats[i].uid)) room.seats[i].level = req.level === 'hard' ? 'hard' : 'medium';
         return res(room, full);
       }
       case 'rename':
@@ -106,6 +112,7 @@
         if (sv.some(s => !s)) return { err: 'Every seat needs a player.' };
         const g = GD.newGame(sv.map((s, i) => s.name || 'Player ' + (i + 1)), sv.map(s => s.uid), room.cfg.levels, room.cfg.decl, room.cfg.timer);
         g.host = sv.some(s => s.uid === room.cfg.host) ? room.cfg.host : sv[0].uid;
+        g.botLevels = sv.map(s => (BOT.isBot(s.uid) ? (s.level === 'hard' ? 'hard' : 'medium') : null));
         g.turnAt = now;
         return res(room, g);
       }

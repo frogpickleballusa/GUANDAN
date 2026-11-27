@@ -74,6 +74,7 @@ input{min-height:44px;border-radius:12px;border:1.5px solid #ffffff33;background
 @media(prefers-reduced-motion:reduce){.turnban{animation:none}}
 #playB.on,#passB.on{background:#3ccf9a;color:#062a1d;border-color:transparent}
 .hist{margin-top:10px}.hist .row{gap:8px;padding:8px 0;border-top:1px solid #ffffff18;align-items:center}.hist .mini{justify-content:flex-start}
+.botlv{min-height:34px;font-size:14px;padding:0 6px;margin-left:6px;border-radius:8px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tools button{flex:1 1 80px;min-height:40px;font-size:15px}
 .card{position:relative;width:46px;height:66px;margin-left:-24px;border-radius:7px;background:var(--card);color:var(--cink);border:1px solid #0003;box-shadow:-2px 2px 4px #0005;font-weight:700;font-size:15px;line-height:1;padding:4px 0 0 4px;text-align:left;cursor:pointer;transition:transform .12s;user-select:none;-webkit-user-select:none}
 .card.r{color:var(--red)}
@@ -153,7 +154,7 @@ select{font:inherit;font-size:16px;min-height:44px;border-radius:12px;border:1.5
       <li>Take-back: the player who just moved can ask to undo that one move. The table pauses until the host (whoever created the table) approves or denies it. The host's own take-backs need no approval.</li>
       <li>Pre-pass: tap Pass before your turn and you pass automatically the moment your turn comes (once). If the table has been cleared and you would lead, it cancels instead. When it isn't your turn, Play and Pass become Pre-play and Pre-pass. Pre-play: select cards and tap it; they are played the moment your turn comes if they beat the table, otherwise it cancels and leaves them selected. Other players' card counts show as 10+ until they are down to 10. Last plays shows the most recent plays of the hand, newest first.</li>
       <li>Turn timer: set in game setup (Off, or 10 to 60 seconds, default 20). It applies to every turn except the very first turn of the game. If time runs out you pass; if you were leading a new trick, the lead moves to the next player.</li>
-      <li>Bots: the host (or anyone seated) can fill empty seats with bots before the deal. Bots only see their own cards, play their lowest cards first, don't beat their teammates, and save bombs for when an opponent is close to going out.</li>
+      <li>Bots: the host (or anyone seated) can fill empty seats with bots before the deal, and set each one to Medium or Hard. Bots only see their own cards. Medium bots play their own hand well: lowest cards first, never beating a teammate, saving bombs for when an opponent is close to going out. Hard bots also play for the team: they lead a low single when a teammate is on their last card, avoid leading the shape an opponent could go out on, and block an opponent who is about to go out, bombing if needed.</li>
       <li>Auto-pass: if it's your turn, you have fewer than 4 cards, and the play on the table uses more cards than you hold, you pass automatically. Only the number of cards counts, never their values.</li>
       <li>When you go out and nobody beats your last play, your next teammate still holding cards leads.</li>
       <li>The hand ends once only one team still has cards. Add up each team's finishing places (1st = 1, 2nd = 2 …); the lower total wins the hand, and a tie goes to the team that went out first. Taking all the top places moves up 3; the rest scale down to +2 or +1. With 4 players this is the usual 1-2 = +3, 1-3 = +2, 1-4 = +1. With 6 players: total 6 = +3, 7–8 = +2, 9–10 = +1.</li>
@@ -562,7 +563,7 @@ function render() {
       if (playing && S.turn === i) body += `<span class="cd"></span>`;
       if (S.phase === 'return' && pendPay(i)) body += `<div class="note">choosing tribute</div>`;
       if (S.phase === 'return' && pendRet(i)) body += `<div class="note">giving a card back</div>`;
-      if (isBotUid(S.uids[i])) body += `<div class="note">bot</div>`;
+      if (isBotUid(S.uids[i])) body += `<div class="note">${(S.botLevels || [])[i] === 'hard' ? 'hard bot' : 'bot'}</div>`;
       else if (online.size && !online.has(S.uids[i])) body += `<div class="note">offline</div>`;
     } else if (!taken) body += `<br><button data-sit="${i}">Sit here</button>`;
     else if (seats[i]?.uid === uid) body += `<div class="note">you</div>`;
@@ -691,7 +692,7 @@ function renderSetup() {
   const el = $('#setup');
   el.hidden = !!S;
   if (S) return;
-  if (document.activeElement?.id === 'nm2') return;
+  if (document.activeElement?.id === 'nm2' || document.activeElement?.classList?.contains('botlv')) return;
   const ed = mySeats().length > 0;
   const opt = (vals, cur, lab) => vals.map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${lab(v)}</option>`).join('');
   const dis = ed ? '' : 'disabled';
@@ -704,7 +705,7 @@ function renderSetup() {
       <label>Turn timer<select id="cfT" data-cfg="1" ${dis}>${opt(TIMERS, cfg.timer ?? 20, v => v ? v + ' seconds' : 'Off')}</select></label>
     </div>
     <h2 style="font-size:18px">At the table · ${seats.slice(0, cfg.n).filter(Boolean).length} of ${cfg.n}</h2>
-    <ol style="margin-top:4px">${seats.slice(0, cfg.n).map((st, i) => `<li>${teamDot(i)}${st ? `<b>${esc(seatName(i))}</b>${st.uid === uid ? ' (you)' : isBotUid(st.uid) ? ' (bot)' : ''}` : '<span class="note">open seat</span>'} <span class="note">· ${TN[GD.team(i)]}</span></li>`).join('')}</ol>
+    <ol style="margin-top:4px">${seats.slice(0, cfg.n).map((st, i) => `<li>${teamDot(i)}${st ? `<b>${esc(seatName(i))}</b>${st.uid === uid ? ' (you)' : isBotUid(st.uid) ? (ed ? ` <select class="botlv" data-botlv="${i}" aria-label="Bot level"><option value="medium" ${st.level !== 'hard' ? 'selected' : ''}>Medium bot</option><option value="hard" ${st.level === 'hard' ? 'selected' : ''}>Hard bot</option></select>` : ` (${st.level === 'hard' ? 'hard' : 'medium'} bot)`) : ''}` : '<span class="note">open seat</span>'} <span class="note">· ${TN[GD.team(i)]}</span></li>`).join('')}</ol>
     ${ed && seats.slice(0, cfg.n).some(x => !x) ? '<button class="ghost" id="botsB" style="margin-bottom:12px">Fill empty seats with bots</button>' : ''}
     ${mySeats().length ? `<label style="display:grid;gap:4px;font-size:14px;font-weight:600;margin-bottom:12px">Your name at this table<input id="nm2" maxlength="16" value="${esc(ls.get('gd6name') || '')}" placeholder="Shown to everyone"></label>` : ''}
     <p class="note">${ed ? 'Anyone seated can change these until the deal. Lowering the player count frees the extra seats.' : 'Take a seat to change the setup.'}</p>`;
@@ -791,6 +792,7 @@ $('#nm').value = ls.get('gd6name') || '';
 $('#nm').addEventListener('change', () => ls.set('gd6name', $('#nm').value.trim()));
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset.botlv) return call('botLevel', { seat: +t.dataset.botlv, level: t.value });
   if (t.id === 'nm2') return rename(t.value.trim());
   if (!t.dataset.cfg) return;
   const c = { n: +$('#cfN').value, levels: [+$('#cfL0').value, +$('#cfL1').value], decl: +$('#cfD').value, timer: +$('#cfT').value };
